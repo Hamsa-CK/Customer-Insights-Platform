@@ -55,21 +55,28 @@ def show_sales_analytics(vendor_id, df_items, df_orders, df_products):
     my_items["gross_line"] = my_items["quantity"] * my_items["price_per_unit"]
     
     # Merge items with products to get target baseline values for profit metrics
-    my_items = pd.merge(my_items, df_products[["product_id", "name"]], on="product_id", how="left")
+    prod_cols = [c for c in ["product_id", "name"] if c in df_products.columns]
+    my_items = pd.merge(my_items, df_products[prod_cols], on="product_id", how="left")
+    
+    if "name" not in my_items.columns:
+        my_items["name"] = "Unknown SKU"
+    else:
+        my_items["name"] = my_items["name"].fillna("Uncategorized SKU")
     
     # Cost modeling logic: base wholesale cost estimated at 65% of listing retail
     my_items["cost_basis_line"] = my_items["gross_line"] * 0.65
     my_items["profit_line"] = my_items["gross_line"] - my_items["cost_basis_line"]
 
     # Merge against main order registry for timelines and delivery statuses
-    sales_master = pd.merge(my_items, df_orders[["order_id", "created_at", "status"]], on="order_id", how="inner")
+    order_cols = [c for c in ["order_id", "created_at", "status"] if c in df_orders.columns]
+    sales_master = pd.merge(my_items, df_orders[order_cols], on="order_id", how="inner")
     
     if sales_master.empty:
         st.info("⏳ Core transactional records are mapping. Check back shortly.")
         return
 
     # Date parse normalization
-    sales_master["datetime"] = pd.to_datetime(sales_master["created_at"])
+    sales_master["datetime"] = pd.to_datetime(sales_master.get("created_at", pd.Timestamp.now()))
     sales_master["date"] = sales_master["datetime"].dt.date
     sales_master["month"] = sales_master["datetime"].dt.to_period("M").astype(str)
 
@@ -81,19 +88,23 @@ def show_sales_analytics(vendor_id, df_items, df_orders, df_products):
 
     # ● Net Revenue & Profit: Exclude canceled and failed orders to showcase actual earnings
     valid_sales = sales_master[~sales_master["status"].isin(["Cancelled", "Failed"])]
-    revenue = valid_sales["gross_line"].sum()
-    profit = valid_sales["profit_line"].sum()
+    revenue = valid_sales["gross_line"].sum() if not valid_sales.empty else 0.0
+    profit = valid_sales["profit_line"].sum() if not valid_sales.empty else 0.0
 
     # ● Unique Orders Count & AOV (Average Order Value)
-    total_orders_count = valid_sales["order_id"].nunique()
+    total_orders_count = valid_sales["order_id"].nunique() if not valid_sales.empty else 0
     aov = (revenue / total_orders_count) if total_orders_count > 0 else 0.0
 
     # Calculate time-series snapshots for the UI Cards
-    latest_day = valid_sales.groupby("date")["gross_line"].sum().reset_index()
-    daily_sales_value = latest_day.iloc[-1]["gross_line"] if not latest_day.empty else 0.0
+    if not valid_sales.empty:
+        latest_day = valid_sales.groupby("date")["gross_line"].sum().reset_index()
+        daily_sales_value = latest_day.iloc[-1]["gross_line"] if not latest_day.empty else 0.0
 
-    latest_month = valid_sales.groupby("month")["gross_line"].sum().reset_index()
-    monthly_sales_value = latest_month.iloc[-1]["gross_line"] if not latest_month.empty else 0.0
+        latest_month = valid_sales.groupby("month")["gross_line"].sum().reset_index()
+        monthly_sales_value = latest_month.iloc[-1]["gross_line"] if not latest_month.empty else 0.0
+    else:
+        daily_sales_value = 0.0
+        monthly_sales_value = 0.0
 
     # =========================================================================
     # 🎛️ STEP 3: HIGH-FIDELITY UX KPI CARDS
@@ -163,58 +174,61 @@ def show_sales_analytics(vendor_id, df_items, df_orders, df_products):
     # =========================================================================
     # 📊 STEP 4: CHARTS & INTELLIGENCE VISUALIZATIONS
     # =========================================================================
-    chart_row1_col1, chart_row1_col2 = st.columns(2)
+    if not valid_sales.empty:
+        chart_row1_col1, chart_row1_col2 = st.columns(2)
 
-    with chart_row1_col1:
-        # 📈 LINE CHART: Daily Sales
-        st.markdown("#### 📈 Line Chart: Daily Sales Pipeline Velocity")
-        daily_data = valid_sales.groupby("date")["gross_line"].sum().reset_index()
-        fig_line = px.line(
-            daily_data, x="date", y="gross_line",
-            labels={"date": "Date", "gross_line": "Daily Sales ($)"},
-            color_discrete_sequence=["#2ecc71"], markers=True
-        )
-        fig_line.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig_line, use_container_width=True)
+        with chart_row1_col1:
+            # 📈 LINE CHART: Daily Sales
+            st.markdown("#### 📈 Line Chart: Daily Sales Pipeline Velocity")
+            daily_data = valid_sales.groupby("date")["gross_line"].sum().reset_index()
+            fig_line = px.line(
+                daily_data, x="date", y="gross_line",
+                labels={"date": "Date", "gross_line": "Daily Sales ($)"},
+                color_discrete_sequence=["#2ecc71"], markers=True
+            )
+            fig_line.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10))
+            st.plotly_chart(fig_line, use_container_width=True)
 
-    with chart_row1_col2:
-        # 🌊 AREA CHART: Monthly Sales Trend
-        st.markdown("#### 🌊 Area Chart: Monthly Performance Aggregations")
-        monthly_data = valid_sales.groupby("month")["gross_line"].sum().reset_index()
-        fig_area = px.area(
-            monthly_data, x="month", y="gross_line",
-            labels={"month": "Billing Month", "gross_line": "Sales Volume ($)"},
-            color_discrete_sequence=["#3498db"]
-        )
-        fig_area.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig_area, use_container_width=True)
+        with chart_row1_col2:
+            # 🌊 AREA CHART: Monthly Sales Trend
+            st.markdown("#### 🌊 Area Chart: Monthly Performance Aggregations")
+            monthly_data = valid_sales.groupby("month")["gross_line"].sum().reset_index()
+            fig_area = px.area(
+                monthly_data, x="month", y="gross_line",
+                labels={"month": "Billing Month", "gross_line": "Sales Volume ($)"},
+                color_discrete_sequence=["#3498db"]
+            )
+            fig_area.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10))
+            st.plotly_chart(fig_area, use_container_width=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    chart_row2_col1, chart_row2_col2 = st.columns(2)
+        st.markdown("<br>", unsafe_allow_html=True)
+        chart_row2_col1, chart_row2_col2 = st.columns(2)
 
-    with chart_row2_col1:
-        # 📊 BAR CHART: Product Revenue Split
-        st.markdown("#### 📊 Bar Chart: Revenue Breakdown By SKU")
-        prod_data = valid_sales.groupby("name")["gross_line"].sum().reset_index()
-        prod_data = prod_data.sort_values(by="gross_line", ascending=True).tail(5) # Horizontal top 5
-        
-        fig_bar = px.bar(
-            prod_data, x="gross_line", y="name", orientation="h",
-            labels={"gross_line": "Revenue ($)", "name": "Product SKU"},
-            color="gross_line", color_continuous_scale="Blues"
-        )
-        fig_bar.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), coloraxis_showscale=False)
-        st.plotly_chart(fig_bar, use_container_width=True)
+        with chart_row2_col1:
+            # 📊 BAR CHART: Product Revenue Split
+            st.markdown("#### 📊 Bar Chart: Revenue Breakdown By SKU")
+            prod_data = valid_sales.groupby("name")["gross_line"].sum().reset_index()
+            prod_data = prod_data.sort_values(by="gross_line", ascending=True).tail(5)
+            
+            fig_bar = px.bar(
+                prod_data, x="gross_line", y="name", orientation="h",
+                labels={"gross_line": "Revenue ($)", "name": "Product SKU"},
+                color="gross_line", color_continuous_scale="Tealgrn"
+            )
+            fig_bar.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), coloraxis_showscale=False)
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-    with chart_row2_col2:
-        # 🍕 PIE CHART: Order Status Allocation
-        st.markdown("#### 🍕 Pie Chart: Share of Order States")
-        status_data = sales_master.groupby("status")["order_id"].count().reset_index()
-        
-        fig_pie = px.pie(
-            status_data, values="order_id", names="status",
-            hole=0.4,
-            color_discrete_sequence=px.colors.qualitative.Safe
-        )
-        fig_pie.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), legend=dict(orientation="h", y=-0.15))
-        st.plotly_chart(fig_pie, use_container_width=True)
+        with chart_row2_col2:
+            # 🍕 PIE CHART: Order Status Allocation
+            st.markdown("#### 🍕 Pie Chart: Share of Order States")
+            status_data = sales_master.groupby("status")["order_id"].count().reset_index()
+            
+            fig_pie = px.pie(
+                status_data, values="order_id", names="status",
+                hole=0.4,
+                color_discrete_sequence=px.colors.qualitative.Safe
+            )
+            fig_pie.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), legend=dict(orientation="h", y=-0.15))
+            st.plotly_chart(fig_pie, use_container_width=True)
+    else:
+        st.info("ℹ️ No valid completed sales transactions found for visual chart rendering.")

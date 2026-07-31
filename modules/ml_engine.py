@@ -68,7 +68,7 @@ def predict_inventory_demand(vendor_id=None):
     else:
         products_to_forecast = df_products
 
-    # Generate synthetic features for mock-up training context
+    # Generate synthetic features for model training context
     forecasts = []
     for _, row in products_to_forecast.iterrows():
         p_id = row["product_id"]

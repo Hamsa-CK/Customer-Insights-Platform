@@ -47,11 +47,15 @@ def show_product_management(vendor_id, df_products):
     my_products = df_products[df_products["vendor_id"] == vendor_id].copy()
     
     total_items = len(my_products)
-    out_of_stock = len(my_products[my_products["current_stock"] == 0])
-    low_stock = len(my_products[(my_products["current_stock"] <= my_products["low_stock_threshold"]) & (my_products["current_stock"] > 0)])
+    out_of_stock = len(my_products[my_products["current_stock"] == 0]) if "current_stock" in my_products.columns else 0
+    
+    if "current_stock" in my_products.columns and "low_stock_threshold" in my_products.columns:
+        low_stock = len(my_products[(my_products["current_stock"] <= my_products["low_stock_threshold"]) & (my_products["current_stock"] > 0)])
+    else:
+        low_stock = 0
     
     # Calculate average product retail pricing tier
-    avg_price = my_products["price"].mean() if total_items > 0 else 0.0
+    avg_price = my_products["price"].mean() if (total_items > 0 and "price" in my_products.columns) else 0.0
 
     # =========================================================================
     # 🎛️ STEP 2: HIGH-FIDELITY KPI CARDS
@@ -97,13 +101,15 @@ def show_product_management(vendor_id, df_products):
     # =========================================================================
     action_tab1, action_tab2 = st.tabs(["➕ Publish New Product", "📝 Bulk Modifications & Actions"])
 
+    default_categories = ["Electronics", "Beauty", "Sports", "Home & Living", "Fashion"]
+
     with action_tab1:
         st.markdown("#### 🚀 Expand Active Marketplace Presence")
         with st.form("add_product_form", clear_on_submit=True):
             col_a, col_b = st.columns(2)
             with col_a:
                 new_name = st.text_input("Product Name *", placeholder="e.g., Premium Wireless Headphones")
-                new_category = st.selectbox("Category Grouping", ["Electronics", "Beauty", "Sports", "Home & Living", "Fashion"])
+                new_category = st.selectbox("Category Grouping", default_categories)
                 new_warehouse = st.text_input("Warehouse Location / Vendor Hub", value=f"WH-VNDR-{vendor_id}")
             with col_b:
                 new_price = st.number_input("Retail Listing Price ($) *", min_value=0.10, value=19.99, step=0.01)
@@ -113,8 +119,8 @@ def show_product_management(vendor_id, df_products):
             submit_add = st.form_submit_button("✨ Deploy Item Live to Marketplace")
             
             if submit_add:
-                if not new_name:
-                    st.error("❌ Product Name field is required to write parquet registry index lines.")
+                if not new_name.strip():
+                    st.error("❌ Product Name field is required.")
                 else:
                     # Auto-incrementing product_id safely
                     next_id = int(df_products["product_id"].max() + 1) if not df_products.empty else 1
@@ -124,7 +130,7 @@ def show_product_management(vendor_id, df_products):
                         "product_id": next_id,
                         "vendor_id": int(vendor_id),
                         "category": new_category,
-                        "name": new_name,
+                        "name": new_name.strip(),
                         "description": f"Managed at warehouse hub {new_warehouse}.",
                         "price": float(new_price),
                         "current_stock": int(new_stock),
@@ -133,9 +139,12 @@ def show_product_management(vendor_id, df_products):
                     
                     # Concat and overwrite the parquet file safely
                     updated_df = pd.concat([df_products, new_row], ignore_index=True)
-                    updated_df.to_parquet("data/products.parquet", index=False)
-                    st.success(f"🎉 **{new_name}** successfully listed! Images processed into media cloud channels.")
-                    st.rerun()
+                    try:
+                        updated_df.to_parquet("data/products.parquet", index=False)
+                        st.success(f"🎉 **{new_name}** successfully listed!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Failed to persist item changes: {e}")
 
     # =========================================================================
     # ⚙️ STEP 4: EDIT, UPDATE PRICE, UPDATE STOCK, & DELETE OPERATIONS
@@ -151,12 +160,17 @@ def show_product_management(vendor_id, df_products):
             product_row = my_products[my_products["name"] == selected_product_name].iloc[0]
             target_id = int(product_row["product_id"])
             
+            # Dynamic Category List handling
+            current_cat = str(product_row["category"])
+            cat_options = list(set(default_categories + [current_cat]))
+            cat_index = cat_options.index(current_cat) if current_cat in cat_options else 0
+
             edit_col1, edit_col2, edit_col3 = st.columns([1, 1, 1])
             
             with edit_col1:
                 st.markdown("**🔄 Edit Info & Thresholds**")
                 updated_name = st.text_input("Edit Product Name", value=str(product_row["name"]))
-                updated_cat = st.selectbox("Change Category", ["Electronics", "Beauty", "Sports", "Home & Living", "Fashion"], index=["Electronics", "Beauty", "Sports", "Home & Living", "Fashion"].index(product_row["category"]))
+                updated_cat = st.selectbox("Change Category", cat_options, index=cat_index)
                 
             with edit_col2:
                 st.markdown("**💰 Financial & Stock Buffers**")
@@ -176,16 +190,22 @@ def show_product_management(vendor_id, df_products):
                 df_products.loc[df_products["product_id"] == target_id, "price"] = updated_price
                 df_products.loc[df_products["product_id"] == target_id, "current_stock"] = updated_stock
                 
-                df_products.to_parquet("data/products.parquet", index=False)
-                st.success(f"📝 Applied changes to SKU #{target_id} successfully.")
-                st.rerun()
+                try:
+                    df_products.to_parquet("data/products.parquet", index=False)
+                    st.success(f"📝 Applied changes to SKU #{target_id} successfully.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Failed to save updates: {e}")
 
             # 🗑️ Execute Row Deletion
             if delete_btn:
                 df_products = df_products[df_products["product_id"] != target_id]
-                df_products.to_parquet("data/products.parquet", index=False)
-                st.warning(f"🗑️ Permanently purged item **{selected_product_name}** from platform indices.")
-                st.rerun()
+                try:
+                    df_products.to_parquet("data/products.parquet", index=False)
+                    st.warning(f"🗑️ Permanently purged item **{selected_product_name}** from platform indices.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Failed to delete item: {e}")
 
     st.markdown("---")
 
@@ -195,8 +215,11 @@ def show_product_management(vendor_id, df_products):
     st.markdown("#### 📑 Complete Live Product Catalog Directory")
     
     if not my_products.empty:
-        # Generate dynamic clean view with the requested variables
-        display_df = my_products[["product_id", "name", "category", "price", "current_stock"]].copy()
+        # Generate dynamic clean view with requested variables
+        display_cols = ["product_id", "name", "category", "price", "current_stock"]
+        available_cols = [c for c in display_cols if c in my_products.columns]
+        display_df = my_products[available_cols].copy()
+        
         display_df["Warehouse Info"] = display_df["product_id"].apply(lambda idx: f"HUB-WH-{vendor_id}-LOC{idx}")
         
         st.dataframe(

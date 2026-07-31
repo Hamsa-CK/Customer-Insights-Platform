@@ -47,8 +47,8 @@ def show_vendor_dashboard(vendor_id, df_products, df_items, df_orders):
     my_items = df_items[df_items["vendor_id"] == vendor_id].copy()
     
     # Isolate cross-referenced orders
-    my_order_ids = my_items["order_id"].unique()
-    my_orders = df_orders[df_orders["order_id"].isin(my_order_ids)]
+    my_order_ids = my_items["order_id"].unique() if not my_items.empty else []
+    my_orders = df_orders[df_orders["order_id"].isin(my_order_ids)] if len(my_order_ids) > 0 else pd.DataFrame()
 
     # 💰 1. Revenue Calculations
     if not my_items.empty:
@@ -59,8 +59,8 @@ def show_vendor_dashboard(vendor_id, df_products, df_items, df_orders):
 
     # 📦 2. Order Breakdown Counters
     total_orders = len(my_order_ids)
-    pending_orders = len(my_orders[my_orders["status"].isin(["Pending", "Processing"])])
-    fulfilled_orders = len(my_orders[my_orders["status"].isin(["Delivered", "Shipped"])])
+    pending_orders = len(my_orders[my_orders["status"].isin(["Pending", "Processing"])]) if not my_orders.empty else 0
+    fulfilled_orders = len(my_orders[my_orders["status"].isin(["Delivered", "Shipped"])]) if not my_orders.empty else 0
 
     # 🗂️ 3. Catalog Listings
     total_listings = len(my_products)
@@ -135,7 +135,7 @@ def show_vendor_dashboard(vendor_id, df_products, df_items, df_orders):
         if not my_items.empty:
             top_prod_df = my_items.groupby("product_id")["revenue_line"].sum().reset_index()
             top_prod_df = pd.merge(top_prod_df, my_products[["product_id", "name"]], on="product_id", how="left")
-            top_prod_df = top_prod_df.sort_values(by="revenue_line", ascending=True).tail(5) # Ascending for clean horizontal orientation
+            top_prod_df = top_prod_df.sort_values(by="revenue_line", ascending=True).tail(5)
 
             fig_bar = px.bar(
                 top_prod_df, x="revenue_line", y="name",
@@ -151,32 +151,42 @@ def show_vendor_dashboard(vendor_id, df_products, df_items, df_orders):
 
     st.markdown("---")
 
-   # =========================================================================
+    # =========================================================================
     # 📉 UI LAYOUT: INVENTORY & INTELLIGENT RECOMMENDATIONS
     # =========================================================================
     data_col1, data_col2 = st.columns(2)
 
     with data_col1:
         st.markdown("#### 🚨 Inventory Stock Depletion Status")
-        # Find low stock or out-of-stock items
-        low_stock = my_products[my_products["current_stock"] <= my_products["low_stock_threshold"]]
-        
-        if not low_stock.empty:
-            st.warning(f"⚠️ **{len(low_stock)} items need restocked immediately!**")
-            st.dataframe(
-                low_stock[["name", "current_stock", "low_stock_threshold"]].rename(
-                    columns={"name": "Product SKU Name", "current_stock": "In Stock", "low_stock_threshold": "Alert Limit"}
-                ),
-                use_container_width=True,
-                hide_index=True
-            )
+        if not my_products.empty and "low_stock_threshold" in my_products.columns and "current_stock" in my_products.columns:
+            low_stock = my_products[my_products["current_stock"] <= my_products["low_stock_threshold"]]
+            
+            if not low_stock.empty:
+                st.warning(f"⚠️ **{len(low_stock)} items need restocked immediately!**")
+                st.dataframe(
+                    low_stock[["name", "current_stock", "low_stock_threshold"]].rename(
+                        columns={"name": "Product SKU Name", "current_stock": "In Stock", "low_stock_threshold": "Alert Limit"}
+                    ),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.success("✅ Excellent inventory positions. No items are below target thresholds!")
+                st.markdown("##### 📦 Current Inventory Catalog Overview")
+                st.dataframe(
+                    my_products[["name", "current_stock", "price"]].rename(
+                        columns={"name": "Product Name", "current_stock": "In Stock", "price": "Price ($)"}
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                    height=320
+                )
         else:
-            st.success("✅ Excellent inventory positions. No items are below target thresholds!")
+            st.info("No active catalog inventory metrics found.")
 
     with data_col2:
         st.markdown("#### 🧠 Smart Stock Recommendations")
         if not my_products.empty and not my_items.empty:
-            # 1. AI Banner
             st.markdown("""
                 <div style="background-color: #ebf5fb; border-left: 5px solid #2980b9; padding: 12px; border-radius: 4px; margin-bottom: 15px;">
                     <strong>💡 AI Cross-Selling Suggestion:</strong><br>
@@ -185,36 +195,56 @@ def show_vendor_dashboard(vendor_id, df_products, df_items, df_orders):
                 </div>
             """, unsafe_allow_html=True)
             
-            # 2. Identify Top 2 Fast Movers based on quantity sold
             top_movers = my_items.groupby("product_id")["quantity"].sum().reset_index()
             top_movers = pd.merge(top_movers, my_products[["product_id", "name"]], on="product_id")
             top_movers = top_movers.sort_values(by="quantity", ascending=False).head(2)
             
-            st.markdown("##### ⚡ Velocity Recommendation Insights")
+            max_qty = my_items.groupby("product_id")["quantity"].sum().max()
             
-            # 3. Dynamic KPI Metric Cards
-            kpi_cols = st.columns(2)
-            for i, (_, row) in enumerate(top_movers.iterrows()):
-                with kpi_cols[i]:
-                    st.metric(
-                        label="Buffer Expansion", 
-                        value="+15%", 
-                        delta=row['name'][:18] # Safely truncate to prevent text overflow
-                    )
-            
-            st.markdown("---")
-            
-            # 4. Text Insights (Rendered as bold black markdown) and Interactive Action Widgets
-            for idx, item in top_movers.iterrows():
-                # Render clear black readable insight text instead of st.caption
-                st.markdown(f"• **{item['name']}** variant showcases steady run-rates. Recommend expanding safety buffer by 15%.")
+            buffer_data = []
+            for _, row in top_movers.iterrows():
+                ratio = row["quantity"] / max_qty if max_qty > 0 else 0.5
+                if ratio >= 0.8:
+                    buffer_pct = 25
+                elif ratio >= 0.5:
+                    buffer_pct = 15
+                else:
+                    buffer_pct = 10
                 
-                # Interactive Quick-Action Widget row directly connected to the insight
-                btn_col1, _ = st.columns([0.5, 0.5])
-                with btn_col1:
-                    if st.button(f"⚡ Approve 15% Buffer: {item['name'][:12]}...", key=f"buff_btn_{item['product_id']}_{idx}"):
-                        st.toast(f"✅ Safety buffer updated successfully for {item['name']}!")
-                st.markdown("<br>", unsafe_allow_html=True)
-        
+                buffer_data.append({
+                    "product_id": row["product_id"],
+                    "name": row["name"],
+                    "quantity": row["quantity"],
+                    "buffer_str": f"+{buffer_pct}%",
+                    "buffer_pct": buffer_pct
+                })
+            
+            df_buff = pd.DataFrame(buffer_data)
+
+            if not df_buff.empty:
+                st.markdown("##### ⚡ Velocity Recommendation Insights")
+                
+                # SAFE COLUMN ALLOCATION (Fixes potential IndexError)
+                kpi_cols = st.columns(len(df_buff))
+                for i, (_, row) in enumerate(df_buff.iterrows()):
+                    with kpi_cols[i]:
+                        st.metric(
+                            label="Buffer Expansion", 
+                            value=row['buffer_str'], 
+                            delta=str(row['name'])[:18]
+                        )
+                
+                st.markdown("---")
+                
+                for idx, item in df_buff.iterrows():
+                    st.markdown(f"• **{item['name']}** variant showcases steady run-rates. Recommend expanding safety buffer by {item['buffer_str']}.")
+                    
+                    btn_col1, _ = st.columns([0.85, 0.15])
+                    with btn_col1:
+                        if st.button(f"⚡ Approve {item['buffer_str']} Buffer: {str(item['name'])[:22]}", key=f"buff_btn_{item['product_id']}_{idx}"):
+                            st.toast(f"✅ Safety buffer updated successfully for {item['name']}!")
+                    st.markdown("<br>", unsafe_allow_html=True)
+            else:
+                st.info("No moving items available for buffer analysis.")
         else:
             st.info("Awaiting structural catalog depth parameters before rendering recommendations.")

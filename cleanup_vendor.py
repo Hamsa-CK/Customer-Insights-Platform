@@ -34,5 +34,5 @@ def delete_vendor_by_email(email_to_delete):
 
 # --- RUN THE CLEANUP ---
 # Change this to the exact email you used for VoltDrive Logistics
-TARGET_EMAIL = "partner@shopsense.com" 
+TARGET_EMAIL = "vendo102@shopsense.com" 
 delete_vendor_by_email(TARGET_EMAIL)

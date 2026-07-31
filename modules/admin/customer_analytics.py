@@ -36,10 +36,15 @@ def show_customer_analytics(df_customers, df_orders):
     retention_rate = (returning_cust_count / total_cust * 100) if total_cust > 0 else 0.0
     
     # 5. Churn Rate (%) (Define churn as customers inactive for more than 60 days)
-    max_date = valid_orders["created_at"].max()
-    last_purchase = valid_orders.groupby("customer_id")["created_at"].max()
-    days_since_last_purchase = (max_date - last_purchase).dt.days
-    churned_cust_count = int((days_since_last_purchase > 60).sum())
+    if not valid_orders.empty:
+        max_date = valid_orders["created_at"].max()
+        last_purchase = valid_orders.groupby("customer_id")["created_at"].max()
+        days_since_last_purchase = (max_date - last_purchase).dt.days
+        churned_cust_count = int((days_since_last_purchase > 60).sum())
+    else:
+        max_date = pd.Timestamp.now()
+        churned_cust_count = 0
+        
     churn_rate = (churned_cust_count / total_cust * 100) if total_cust > 0 else 0.0
 
     # 6. Average Customer Lifetime Value (CLV)
@@ -98,7 +103,6 @@ def show_customer_analytics(df_customers, df_orders):
     
     with chart_col1:
         st.markdown("#### 🍕 Customer Base Composition")
-        # Chart 1: Donut showing breakdown of New vs. Returning customers
         composition_df = pd.DataFrame({
             "Customer Status": ["New Customers", "Returning Customers"],
             "Headcount": [new_cust_count, returning_cust_count]
@@ -116,7 +120,6 @@ def show_customer_analytics(df_customers, df_orders):
         
     with chart_col2:
         st.markdown("#### ⚖️ Retention vs. Churn Rates")
-        # Chart 2: Bar chart contrasting Retention Rate vs Churn Rate directly
         rate_df = pd.DataFrame({
             "Metric Category": ["Retention Rate", "Churn Rate"],
             "Percentage (%)": [retention_rate, churn_rate]
@@ -140,44 +143,38 @@ def show_customer_analytics(df_customers, df_orders):
     st.markdown("### 🧬 Machine Learning: Customer Segmentation")
     st.caption("Using K-Means Clustering to automatically sort customers into 4 strategic value tiers based on purchase dynamics.")
 
-    # Calculate Recency, Frequency, and Monetary (RFM) per customer
-    rfm = valid_orders.groupby("customer_id").agg({
-        "created_at": lambda x: (max_date - x.max()).days,  # Recency
-        "order_id": "count",                              # Frequency
-        "total_amount": "sum"                              # Monetary
-    }).reset_index()
-    
-    rfm.columns = ["customer_id", "recency", "frequency", "monetary"]
+    if not valid_orders.empty:
+        rfm = valid_orders.groupby("customer_id").agg({
+            "created_at": lambda x: (max_date - x.max()).days,  # Recency
+            "order_id": "count",                               # Frequency
+            "total_amount": "sum"                               # Monetary
+        }).reset_index()
+        rfm.columns = ["customer_id", "recency", "frequency", "monetary"]
+    else:
+        rfm = pd.DataFrame(columns=["customer_id", "recency", "frequency", "monetary"])
+
     rfm = rfm.fillna(0)
 
     # ML Algorithm logic block
     if len(rfm) >= 4:
-        # Standardize features for structural distance clustering
         scaler = StandardScaler()
         rfm_scaled = scaler.fit_transform(rfm[["recency", "frequency", "monetary"]])
 
-        # Model instantiation for exactly 4 target groups
-        kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
+        n_clusters = min(4, len(rfm))
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         rfm["cluster"] = kmeans.fit_predict(rfm_scaled)
 
-        # Calculate cluster centroids to map labels dynamically to high/low parameters
+        # Map labels dynamically based on ranked centroids
         centroids = rfm.groupby("cluster")[["recency", "frequency", "monetary"]].mean()
+        sorted_clusters = centroids.sort_values(by="monetary", ascending=False).index.tolist()
         
-        # Determine labels: Low recency, high frequency, high spend = Premium
-        # High recency, low frequency, low spend = Inactive
-        sorted_by_monetary = centroids.sort_values(by="monetary", ascending=False).index.tolist()
-        
-        tier_mapping = {
-            sorted_by_monetary[0]: "Premium",
-            sorted_by_monetary[1]: "Regular",
-            sorted_by_monetary[2]: "Occasional",
-            sorted_by_monetary[3]: "Inactive"
-        }
+        tier_labels = ["Premium", "Regular", "Occasional", "Inactive"]
+        tier_mapping = {cluster_id: tier_labels[idx] for idx, cluster_id in enumerate(sorted_clusters)}
         rfm["segment"] = rfm["cluster"].map(tier_mapping)
     else:
-        # Fallback allocation if data profile is too sparse for ML pipeline
         rfm["segment"] = "Regular"
-        if len(rfm) > 0: rfm.loc[0, "segment"] = "Premium"
+        if len(rfm) > 0:
+            rfm.loc[0, "segment"] = "Premium"
 
     # Merge labels back into directory catalog
     customer_directory = pd.merge(df_customers, rfm[["customer_id", "recency", "frequency", "monetary", "segment"]], on="customer_id", how="left")
@@ -238,7 +235,6 @@ def show_customer_analytics(df_customers, df_orders):
     if selected_tier != "All Segments":
         directory_display = directory_display[directory_display["segment"] == selected_tier]
         
-    # Dynamically match and resolve names/emails based on whatever columns actually exist in the parquet file
     all_cols = directory_display.columns.tolist()
     
     # 1. Resolve Name
@@ -258,7 +254,7 @@ def show_customer_analytics(df_customers, df_orders):
     else:
         directory_display["Contact Email"] = "N/A"
 
-    # Select only our safely resolved columns to display
+    # Select only resolved columns to display
     display_subset = directory_display[["customer_id", "Customer Name", "Contact Email", "segment", "monetary"]].rename(
         columns={
             "customer_id": "ID",

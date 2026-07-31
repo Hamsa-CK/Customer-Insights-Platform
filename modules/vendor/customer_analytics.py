@@ -46,7 +46,7 @@ def show_customer_analytics(vendor_id, df_items, df_orders, df_customers):
     # =========================================================================
     # 🧮 STEP 1: CUSTOMER ANALYTICS COHORT ENGINE
     # =========================================================================
-    # Filter transaction lines belonging to this vendor
+    # Filter transaction lines belonging strictly to this vendor
     my_items = df_items[df_items["vendor_id"] == vendor_id].copy()
     
     if my_items.empty or df_orders.empty:
@@ -77,11 +77,11 @@ def show_customer_analytics(vendor_id, df_items, df_orders, df_customers):
     returning_shoppers_count = len(returning_shoppers_df)
     new_shoppers_count = total_unique_shoppers - returning_shoppers_count
 
-    # ● Retention & Churn Rates
+    # Retention & Churn Rates
     retention_rate = (returning_shoppers_count / total_unique_shoppers * 100) if total_unique_shoppers > 0 else 0.0
     churn_rate = 100.0 - retention_rate
 
-    # ● Customer Lifetime Value (CLV)
+    # Customer Lifetime Value (CLV)
     clv_mean = shopper_frequency["total_spent"].mean() if total_unique_shoppers > 0 else 0.0
 
     # =========================================================================
@@ -144,7 +144,7 @@ def show_customer_analytics(vendor_id, df_items, df_orders, df_customers):
     # Prepare clustering features matrix (Spent vs Volume Count)
     X = shopper_frequency[["total_spent", "order_count"]].copy()
     
-    # We enforce exactly 4 groups to explicitly isolate: Premium, Regular, Occasional, Inactive
+    # Enforce exactly 4 groups to explicitly isolate: Premium, Regular, Occasional, Inactive
     n_clusters = 4
     
     if len(X) >= n_clusters:
@@ -152,8 +152,7 @@ def show_customer_analytics(vendor_id, df_items, df_orders, df_customers):
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         shopper_frequency["cluster_id"] = kmeans.fit_predict(X)
         
-        # Intelligently map generated cluster labels to requested target marketing groups 
-        # based on overall purchasing power (total_spent)
+        # Intelligently map generated cluster labels based on total_spent
         cluster_means = shopper_frequency.groupby("cluster_id")["total_spent"].mean().sort_values(ascending=False).index
         
         group_mapping = {
@@ -208,14 +207,12 @@ def show_customer_analytics(vendor_id, df_items, df_orders, df_customers):
             # 👥 SAFE CUSTOMER DIRECTORY MERGE
             # =========================================================================
             if not df_customers.empty and "customer_id" in df_customers.columns:
-                # Dynamically determine which columns exist in the dataset to prevent KeyErrors
                 available_cols = ["customer_id"]
                 if "name" in df_customers.columns:
                     available_cols.append("name")
                 if "email" in df_customers.columns:
                     available_cols.append("email")
                     
-                # Merge using only the columns that actually exist
                 detailed_report = pd.merge(
                     shopper_frequency, 
                     df_customers[available_cols], 
@@ -223,18 +220,15 @@ def show_customer_analytics(vendor_id, df_items, df_orders, df_customers):
                     how="left"
                 )
                 
-                # Dynamically create fallback labels if some metadata columns are missing
                 if "name" not in detailed_report.columns:
                     detailed_report["name"] = detailed_report["customer_id"].apply(lambda idx: f"Customer #{idx}")
                 if "email" not in detailed_report.columns:
                     detailed_report["email"] = "hidden@platform.store"
             else:
-                # Fallback if df_customers is completely empty or missing structural indexes
                 detailed_report = shopper_frequency.copy()
                 detailed_report["name"] = detailed_report["customer_id"].apply(lambda idx: f"Customer #{idx}")
                 detailed_report["email"] = "hidden@platform.store"
                 
-            # Fill individual missing row values if the merge returned NaN for specific entries
             detailed_report["name"] = detailed_report["name"].fillna(
                 detailed_report["customer_id"].apply(lambda idx: f"Customer #{idx}")
             )

@@ -5,6 +5,17 @@ import plotly.express as px
 def show_inventory_stocks(df_products, df_items, df_orders):
     st.subheader("🧱 Platform Stock Status Monitoring")
 
+    # Safe local copies
+    df_products = df_products.copy()
+    df_items = df_items.copy()
+    df_orders = df_orders.copy()
+
+    # Ensure required columns exist with fallback values
+    if "current_stock" not in df_products.columns:
+        df_products["current_stock"] = 0
+    if "low_stock_threshold" not in df_products.columns:
+        df_products["low_stock_threshold"] = 10
+
     # ==========================================
     # 🧮 PART 1: INVENTORY KPI CARDS
     # ==========================================
@@ -12,17 +23,17 @@ def show_inventory_stocks(df_products, df_items, df_orders):
     
     # Clean orders to get completed transaction frames
     valid_orders = df_orders[df_orders["status"] != "Cancelled"]
-    valid_items = df_items[df_items["order_id"].isin(valid_orders["order_id"])]
+    valid_items = df_items[df_items["order_id"].isin(valid_orders["order_id"])] if not valid_orders.empty else pd.DataFrame(columns=df_items.columns)
     
     # Metric Calculations
-    total_current_stock = df_products["current_stock"].sum()
+    total_current_stock = int(df_products["current_stock"].sum())
     
     # Proxying "In" and "Out" from dynamic dataset trends
-    total_stock_out = valid_items["quantity"].sum()  # Total units checked out via completed orders
-    total_stock_in = total_current_stock + total_stock_out # Estimate total items ever supplied
+    total_stock_out = int(valid_items["quantity"].sum()) if "quantity" in valid_items.columns and not valid_items.empty else 0
+    total_stock_in = total_current_stock + total_stock_out  # Estimate total items ever supplied
     
     # Inventory Turnover Ratio = Cost of Goods Sold (or total stock sold) / Average Inventory (or current stock)
-    avg_inventory = df_products["current_stock"].mean()
+    avg_inventory = df_products["current_stock"].mean() if not df_products.empty else 0.0
     inventory_turnover = (total_stock_out / avg_inventory) if avg_inventory > 0 else 0.0
     
     # Calculate Low Stock count using item thresholds
@@ -86,16 +97,18 @@ def show_inventory_stocks(df_products, df_items, df_orders):
     
     if not low_stock_df.empty:
         st.error(f"⚠️ There are **{len(low_stock_df)}** items below warehouse threshold limits! Please submit reorder requests.")
+        
+        display_cols = [col for col in ["product_id", "name", "category", "current_stock", "low_stock_threshold"] if col in low_stock_df.columns]
+        rename_map = {
+            "product_id": "Product ID",
+            "name": "Product Name",
+            "category": "Category",
+            "current_stock": "Current Warehouse Balance",
+            "low_stock_threshold": "Safety Threshold Balance"
+        }
+        
         st.dataframe(
-            low_stock_df[["product_id", "name", "category", "current_stock", "low_stock_threshold"]].rename(
-                columns={
-                    "product_id": "Product ID",
-                    "name": "Product Name",
-                    "category": "Category",
-                    "current_stock": "Current Warehouse Balance",
-                    "low_stock_threshold": "Safety Threshold Balance"
-                }
-            ),
+            low_stock_df[display_cols].rename(columns=rename_map),
             use_container_width=True,
             hide_index=True
         )
@@ -113,31 +126,36 @@ def show_inventory_stocks(df_products, df_items, df_orders):
     
     with chart_col1:
         st.markdown("#### 🍕 Current Warehouse Distribution by Category")
-        cat_balance = df_products.groupby("category")["current_stock"].sum().reset_index()
-        
-        fig_stock_pie = px.pie(
-            cat_balance,
-            names="category",
-            values="current_stock",
-            hole=0.4,
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-        fig_stock_pie.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
-        st.plotly_chart(fig_stock_pie, use_container_width=True)
+        if "category" in df_products.columns:
+            cat_balance = df_products.groupby("category")["current_stock"].sum().reset_index()
+            fig_stock_pie = px.pie(
+                cat_balance,
+                names="category",
+                values="current_stock",
+                hole=0.4,
+                color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+            fig_stock_pie.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
+            st.plotly_chart(fig_stock_pie, use_container_width=True)
+        else:
+            st.info("Category details unavailable for stock breakdown.")
         
     with chart_col2:
         st.markdown("#### 📅 Monthly Stock Usage Trend (Units Checked Out)")
-        # Merging orders timestamps to order items to build Monthly Unit Usage
-        merged_usage = pd.merge(df_items, df_orders[["order_id", "created_at"]], on="order_id")
-        merged_usage["Month"] = pd.to_datetime(merged_usage["created_at"]).dt.to_period("M").astype(str)
-        monthly_usage = merged_usage.groupby("Month")["quantity"].sum().reset_index().sort_values("Month")
-        
-        fig_usage_line = px.area(
-            monthly_usage,
-            x="Month",
-            y="quantity",
-            labels={"quantity": "Units Dispatched / Sold", "Month": "Billing Month"},
-            color_discrete_sequence=["#9B59B6"]
-        )
-        fig_usage_line.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
-        st.plotly_chart(fig_usage_line, use_container_width=True)
+        if not valid_orders.empty and not valid_items.empty and "created_at" in valid_orders.columns:
+            merged_usage = pd.merge(valid_items, valid_orders[["order_id", "created_at"]], on="order_id")
+            merged_usage["created_at"] = pd.to_datetime(merged_usage["created_at"])
+            merged_usage["Month"] = merged_usage["created_at"].dt.to_period("M").astype(str)
+            monthly_usage = merged_usage.groupby("Month")["quantity"].sum().reset_index().sort_values("Month")
+            
+            fig_usage_line = px.area(
+                monthly_usage,
+                x="Month",
+                y="quantity",
+                labels={"quantity": "Units Dispatched / Sold", "Month": "Billing Month"},
+                color_discrete_sequence=["#9B59B6"]
+            )
+            fig_usage_line.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
+            st.plotly_chart(fig_usage_line, use_container_width=True)
+        else:
+            st.info("No order usage history available to map monthly demand trends.")

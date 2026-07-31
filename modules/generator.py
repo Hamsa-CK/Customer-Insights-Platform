@@ -90,6 +90,7 @@ def generate_datasets():
     orders_list = []
     order_items_list = []
     base_date = datetime(2025, 7, 16)
+    payment_options = ["UPI", "Credit Card", "Net Banking", "COD"]
 
     for i in range(1, 20001):
         cust_id = random.randint(1, 500)
@@ -115,11 +116,14 @@ def generate_datasets():
                 "price_per_unit": float(prod['price'])
             })
             
+        pay_method = random.choice(payment_options)
         orders_list.append({
             "order_id": i,
             "customer_id": cust_id,
             "total_amount": round(total_amount, 2),
             "status": random.choice(["Delivered", "Delivered", "Delivered", "Shipped", "Pending", "Cancelled"]),
+            "payment_method": pay_method,
+            "assigned_pay_method": pay_method,  # Guarantees complete cross-module compatibility
             "created_at": order_date
         })
 
@@ -147,7 +151,7 @@ def generate_datasets():
     
     print("✅ All Baseline Datasets generated successfully!")
 
-# 🚨 NEW: Seed data helper for newly approved vendor profile creation
+# 🚨 Seed data helper for newly approved vendor profile creation
 def seed_vendor_marketplace_data(vendor_id):
     vendor_id = int(vendor_id)
     
@@ -180,6 +184,7 @@ def seed_vendor_marketplace_data(vendor_id):
     start_order_id = int(df_orders["order_id"].max() + 1)
     start_review_id = int(df_reviews["review_id"].max() + 1)
     base_date = datetime(2025, 7, 16)
+    payment_options = ["UPI", "Credit Card", "Net Banking", "COD"]
     
     new_orders = []
     new_items = []
@@ -202,11 +207,14 @@ def seed_vendor_marketplace_data(vendor_id):
             "price_per_unit": float(chosen_prod['price'])
         })
         
+        pay_method = random.choice(payment_options)
         new_orders.append({
             "order_id": o_id,
             "customer_id": c_id,
             "total_amount": subtotal,
             "status": "Delivered",
+            "payment_method": pay_method,
+            "assigned_pay_method": pay_method,
             "created_at": o_date
         })
         

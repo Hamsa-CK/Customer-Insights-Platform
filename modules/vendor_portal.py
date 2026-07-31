@@ -12,6 +12,9 @@ from modules.vendor.inventory_stocks import show_inventory_stocks
 from modules.vendor.customer_analytics import show_customer_analytics
 from modules.vendor.ml_forecasting import show_ml_forecasting
 from modules.vendor.ml_recommendation import show_ml_recommendation
+from modules.vendor.reviews_ratings import show_reviews_ratings
+from modules.vendor.order_management import show_order_management
+from modules.vendor.payment_management import show_payment_management
 from modules.shared_reports import show_reports_engine
 
 
@@ -45,7 +48,7 @@ def render_vendor_dashboard(active_tab, current_user_id=None, vendor_id=None):
         df_customers = pd.DataFrame()
 
     # =========================================================================
-    # 🛠️ FIXED: STEP 3: RESOLVE STRUCTURAL LINKED VENDOR PROFILE
+    # 🛠️ STEP 3: RESOLVE STRUCTURAL LINKED VENDOR PROFILE
     # =========================================================================
     # Check vendor_id first if explicitly passed, bypassing column cross-contamination
     if vendor_id is not None:
@@ -98,8 +101,17 @@ def render_vendor_dashboard(active_tab, current_user_id=None, vendor_id=None):
         # Includes df_orders to avoid missing argument exceptions
         show_ml_recommendation(vendor_id, df_items, df_orders, df_products)
 
+    elif active_tab == "Reviews & Ratings":
+        show_reviews_ratings(vendor_id, df_products, df_reviews=None, df_items=None)
+
+    elif active_tab == "Order Management":
+        show_order_management(vendor_id, df_orders, df_items, df_products)
+
+    elif active_tab == "Payment Management":
+        show_payment_management(vendor_id, df_orders, df_items, df_payments=None)
+
     elif active_tab == "Report":
-        # ✅ Trigger the reporting shared module for the active vendor account instance
+        # Trigger the reporting shared module for the active vendor account instance
         show_reports_engine(user_role="vendor", vendor_id=vendor_id)
         
     else:

@@ -61,6 +61,10 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
     sales_master = pd.merge(my_items, df_orders[["order_id", "created_at", "status"]], on="order_id", how="inner")
     sales_master = sales_master[~sales_master["status"].isin(["Cancelled", "Failed"])]
     
+    if sales_master.empty:
+        st.info("📦 No valid completed transactions found to train machine learning models.")
+        return
+
     sales_master["date"] = pd.to_datetime(sales_master["created_at"]).dt.date
     
     # Aggregate to daily volume timeline arrays
@@ -72,10 +76,10 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
     
     # Map months to analytical seasons
     daily_sales["Season"] = daily_sales["Month"].map({
-        12:1, 1:1, 2:1,  # Winter
-        3:2, 4:2, 5:2,   # Spring
-        6:3, 7:3, 8:3,   # Summer
-        9:4, 10:4, 11:4  # Autumn
+        12: 1, 1: 1, 2: 1,   # Winter
+        3: 2, 4: 2, 5: 2,    # Spring
+        6: 3, 7: 3, 8: 3,    # Summer
+        9: 4, 10: 4, 11: 4   # Autumn
     }).fillna(3).astype(int)
 
     # Simulated operational overlays for business triggers
@@ -87,7 +91,7 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
     daily_sales["Previous Sales"] = daily_sales["quantity"].shift(1).fillna(daily_sales["quantity"].median())
 
     if len(daily_sales) < 7:
-        st.warning("⚠️ Core data points are thin. Collect at least one week of consecutive transactions to stabilize the model weights.")
+        st.warning("⚠️ Core data points are thin. Collect at least one week of consecutive transactions to stabilize model weights.")
         return
 
     # =========================================================================
@@ -103,9 +107,9 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
     with config_col3:
         input_month = st.slider("Target Execution Month", 1, 12, int(daily_sales["date"].max().month))
     with config_col4:
-        input_festival = st.selectbox("Festival Flag Running?", [0, 1], format_func=lambda x: "Active 📊" if x==1 else "None ❌")
+        input_festival = st.selectbox("Festival Flag Running?", [0, 1], format_func=lambda x: "Active 📊" if x == 1 else "None ❌")
     with config_col5:
-        input_promo = st.selectbox("Promotion Campaign Live?", [0, 1], format_func=lambda x: "Active 📣" if x==1 else "None ❌")
+        input_promo = st.selectbox("Promotion Campaign Live?", [0, 1], format_func=lambda x: "Active 📣" if x == 1 else "None ❌")
 
     st.markdown("---")
 
@@ -160,21 +164,25 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
         model_confidence_label = "Gradient Boosted Scale Matrices"
 
     else:
-        # 📈 3. Prophet Engine Execution
-        prophet_df = daily_sales[["date", "quantity"]].rename(columns={"date": "ds", "quantity": "y"})
-        
-        # Mute logging notifications to keep rendering speeds high
-        m = Prophet(yearly_seasonality=True, daily_seasonality=False, weekly_seasonality=True)
-        m.fit(prophet_df)
-        
-        # Extrapolate out a 30-day structural horizon dataframe
-        future_horizon = m.make_future_dataframe(periods=30)
-        forecast_results = m.predict(future_horizon)
-        
-        # Extract target index point prediction safely
-        prediction = float(forecast_results["yhat"].iloc[-1])
-        final_stock_requirement = int(np.ceil(max(0.0, prediction) * 1.25))
-        model_confidence_label = "Additive Logistic Trend Component"
+        # 📈 3. Prophet Engine Execution with Fallback Handling
+        try:
+            prophet_df = daily_sales[["date", "quantity"]].rename(columns={"date": "ds", "quantity": "y"})
+            
+            m = Prophet(yearly_seasonality=True, daily_seasonality=False, weekly_seasonality=True)
+            m.fit(prophet_df)
+            
+            # Extrapolate out a 30-day structural horizon dataframe
+            future_horizon = m.make_future_dataframe(periods=30)
+            forecast_results = m.predict(future_horizon)
+            
+            prediction = float(forecast_results["yhat"].iloc[-1])
+            final_stock_requirement = int(np.ceil(max(0.0, prediction) * 1.25))
+            model_confidence_label = "Additive Logistic Trend Component"
+        except Exception as e:
+            st.warning(f"Prophet optimization failed to converge: {e}. Falling back to baseline mean projection.")
+            prediction = float(daily_sales["quantity"].mean())
+            final_stock_requirement = int(np.ceil(prediction * 1.20))
+            model_confidence_label = "Fallback Moving Average Baseline"
 
     # =========================================================================
     # 🎛️ STEP 4: OUTPUT DISPLAY VIEWS (HIGH-FIDELITY UX CARDS)
@@ -229,7 +237,6 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
 
     with chart_view_col2:
         st.markdown("##### 🛠️ Feature Weight Multipliers & Impacts Correlation")
-        # Generate correlations between the engineered business factors and product volume drawdowns
         corr_matrix = daily_sales[["quantity", "Previous Sales", "Season", "Month", "Festival", "Promotion"]].corr()[["quantity"]].reset_index()
         corr_matrix = corr_matrix[corr_matrix["index"] != "quantity"]
         

@@ -12,6 +12,7 @@ from modules.admin.ml_recommendation import show_recommendation_system
 from modules.admin.ml_forecasting import show_ml_forecasting
 from modules.admin.churn_prediction import show_churn_clv_analysis
 from modules.shared_reports import show_reports_engine
+from modules.admin.reviews_ratings import show_reviews_ratings
 
 def render_admin_dashboard(active_tab):
     # Load primary data sources safely
@@ -46,16 +47,17 @@ def render_admin_dashboard(active_tab):
     elif active_tab in ["ML Forecasting", "ML forecasting"]:
         show_ml_forecasting(df_orders, df_items, df_products, df_customers, df_vendors)
         
-    # --- FIXED LINE: Added "Churn Prediction" to explicitly catch the sidebar click event ---
+    # --- Catch sidebar click event for Churn Prediction ---
     elif active_tab in ["Churn & CLV", "Churn prediction and clv", "Churn Prediction"]:
         show_churn_clv_analysis(df_customers, df_orders, df_items, df_products)
 
     elif active_tab == "Report":
-        # 👑 Trigger the shared executive reporting suite with admin credentials
+        # Trigger the shared executive reporting suite with admin credentials
         show_reports_engine(user_role="admin")
 
-    
-        
+    elif active_tab == "Reviews & Ratings":
+        show_reviews_ratings(None, df_products, df_vendors, df_customers, df_orders)
+
     else:
         st.subheader(f"🛡️ Admin Command Center - {active_tab}")
         st.caption("Custom operations view")

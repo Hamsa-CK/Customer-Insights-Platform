@@ -58,8 +58,7 @@ def show_inventory_stocks(vendor_id, df_products, df_items):
     # 📤 2. Calculate Stock Out (Total Units Sold/Dispatched)
     total_stock_out = int(my_items["quantity"].sum()) if not my_items.empty else 0
 
-    # 🔄 3. Calculate Stock In (Approximated based on current capacity allocations + historical movement)
-    # Generates a baseline of original warehouse intake volume
+    # 🔄 3. Calculate Stock In (Baseline warehouse intake volume)
     total_stock_in = total_current_stock + total_stock_out
 
     # 📉 4. Calculate Low Stock Count
@@ -144,7 +143,6 @@ def show_inventory_stocks(vendor_id, df_products, df_items):
     
     with chart_col1:
         st.markdown("##### 🛒 Inventory Composition (Current Allocation)")
-        # Bar Chart showing top product distributions
         composition_data = my_products.sort_values(by="current_stock", ascending=False).head(8)
         fig_composition = px.bar(
             composition_data, x="current_stock", y="name",
@@ -159,12 +157,9 @@ def show_inventory_stocks(vendor_id, df_products, df_items):
     with chart_col2:
         st.markdown("##### 📈 Monthly Usage & Velocity Drawdown")
         if not my_items.empty:
-            # Aggregate monthly quantity burn rates
-            # Simulates simulated timeseries logs if order dates require dynamic lookups
             usage_summary = my_items.groupby("product_id")["quantity"].sum().reset_index()
             usage_summary = pd.merge(usage_summary, my_products[["product_id", "name"]], on="product_id", how="left").dropna()
             
-            # Area Chart indicating high outflow SKUs
             fig_usage = px.area(
                 usage_summary.head(6), x="name", y="quantity",
                 labels={"quantity": "Units Sold", "name": "Item Description"},

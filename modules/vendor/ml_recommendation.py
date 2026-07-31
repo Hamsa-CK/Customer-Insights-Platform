@@ -48,7 +48,7 @@ def show_ml_recommendation(vendor_id, df_items, df_orders, df_products):
     st.subheader("🎯 Intelligent Cross-Sell & ML Product Recommendations")
     st.caption("Utilize multi-matrix filtering mechanics to predict shopper affinities and showcase personalized catalog trends.")
 
-    # Filter product lines belonging to this vendor
+    # Filter product lines belonging strictly to this vendor
     my_products = df_products[df_products["vendor_id"] == vendor_id].copy()
     my_items = df_items[df_items["vendor_id"] == vendor_id].copy()
 
@@ -59,24 +59,19 @@ def show_ml_recommendation(vendor_id, df_items, df_orders, df_products):
     # =========================================================================
     # 🧪 ALGORITHMIC ENGINE 1: COLLABORATIVE FILTERING (Recommended Products)
     # =========================================================================
-    # Fallback simulation if transaction interaction matrix is lean
-    # Generates user affinities based on co-occurrence frequencies
     st.markdown("#### 👥 1. Collaborative Filtering Matrix (Recommended Products)")
     st.caption("Predicting individual buyer baskets based on shared cohort transactional behaviors.")
 
-    # Merge items and parent orders to identify unique client interactions
-    sales_master = pd.merge(df_items, df_orders[["order_id", "customer_id", "status"]], on="order_id", how="inner")
+    # Merge vendor items and parent orders to identify unique client interactions
+    sales_master = pd.merge(my_items, df_orders[["order_id", "customer_id", "status"]], on="order_id", how="inner")
     sales_master = sales_master[~sales_master["status"].isin(["Cancelled", "Failed"])]
 
     if not sales_master.empty and sales_master["customer_id"].nunique() > 1:
-        # Build User-Item Interaction Matrix
-        user_item_matrix = sales_master.groupby(["customer_id", "product_id"])["quantity"].sum().unstack(fill_value=0)
-        
         # Calculate item popularity correlations as an item-based collaborative score
         item_popularity = sales_master.groupby("product_id")["quantity"].sum()
         top_collaborative_ids = item_popularity.sort_values(ascending=False).index.tolist()
     else:
-        top_collaborative_ids = df_products["product_id"].head(5).tolist()
+        top_collaborative_ids = my_products["product_id"].head(5).tolist()
 
     # Filter recommendations matching current vendor's items
     rec_products = my_products[my_products["product_id"].isin(top_collaborative_ids)].head(4)
@@ -89,7 +84,7 @@ def show_ml_recommendation(vendor_id, df_items, df_orders, df_products):
                 <div class="rec-card" style="border-top-color: #4c51bf;">
                     <div class="rec-label">{row['category']}</div>
                     <div class="rec-title">{row['name']}</div>
-                    <div class="rec-meta">Affinities Payout: ${row['price']:.2f}</div>
+                    <div class="rec-meta">Price: ${row['price']:.2f}</div>
                 </div>
             """, unsafe_allow_html=True)
 
@@ -106,27 +101,30 @@ def show_ml_recommendation(vendor_id, df_items, df_orders, df_products):
     selected_prod_row = my_products[my_products["name"] == target_product_name].iloc[0]
     target_category = selected_prod_row["category"]
 
-    # Simple text/category distance match vector simulation
-    similar_products = df_products[
-        (df_products["category"] == target_category) & 
-        (df_products["product_id"] != selected_prod_row["product_id"])
+    # Category and product matching isolated strictly to vendor products
+    similar_products = my_products[
+        (my_products["category"] == target_category) & 
+        (my_products["product_id"] != selected_prod_row["product_id"])
     ].head(4)
 
     if similar_products.empty:
-        # Fallback to general category catalog neighbors if strict item filters clear out rows
-        similar_products = df_products[df_products["product_id"] != selected_prod_row["product_id"]].head(4)
+        # Fallback to general vendor catalog neighbors if strict category filter yields no results
+        similar_products = my_products[my_products["product_id"] != selected_prod_row["product_id"]].head(4)
 
-    # Render Similar Products Grid
-    cols_sim = st.columns(4)
-    for i, (_, row) in enumerate(similar_products.iterrows()):
-        with cols_sim[i % 4]:
-            st.markdown(f"""
-                <div class="rec-card" style="border-top-color: #319795;">
-                    <div class="rec-label">Similarity Match: {row['category']}</div>
-                    <div class="rec-title">{row['name']}</div>
-                    <div class="rec-meta">${row['price']:.2f} | Stock: {row['current_stock']}</div>
-                </div>
-            """, unsafe_allow_html=True)
+    if not similar_products.empty:
+        # Render Similar Products Grid
+        cols_sim = st.columns(min(4, len(similar_products)))
+        for i, (_, row) in enumerate(similar_products.iterrows()):
+            with cols_sim[i % len(cols_sim)]:
+                st.markdown(f"""
+                    <div class="rec-card" style="border-top-color: #319795;">
+                        <div class="rec-label">Similarity Match: {row['category']}</div>
+                        <div class="rec-title">{row['name']}</div>
+                        <div class="rec-meta">${row['price']:.2f} | Stock: {row['current_stock']}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info("No additional similar products available in your catalog to compare.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -134,21 +132,21 @@ def show_ml_recommendation(vendor_id, df_items, df_orders, df_products):
     # 📈 TRENDING PRODUCTS (Fulfillment Velocity Allocation)
     # =========================================================================
     st.markdown("#### ⚡ 3. Real-Time Velvet Velocity (Trending Products)")
-    st.caption("High-demand items moving quickly through active channels across the platform over recent hours.")
+    st.caption("High-demand items moving quickly through active channels across your store.")
 
     if not my_items.empty:
-        # Group sales velocity vectors to find global high-runners
+        # Group sales velocity vectors to find high-runners
         trending_metrics = my_items.groupby("product_id")["quantity"].sum().reset_index()
         trending_products_df = pd.merge(trending_metrics, my_products, on="product_id", how="inner")
         trending_products_df = trending_products_df.sort_values(by="quantity", ascending=False).head(4)
     else:
         trending_products_df = my_products.head(4).copy()
-        trending_products_df["quantity"] = 12 # Mock velocity balance
+        trending_products_df["quantity"] = 0
 
     # Render Trending Products Grid
-    cols_trend = st.columns(4)
+    cols_trend = st.columns(min(4, len(trending_products_df)))
     for i, (_, row) in enumerate(trending_products_df.iterrows()):
-        with cols_trend[i % 4]:
+        with cols_trend[i % len(cols_trend)]:
             st.markdown(f"""
                 <div class="rec-card" style="border-top-color: #e53e3e;">
                     <div class="rec-label">🔥 Trending Fast</div>

@@ -109,7 +109,6 @@ def show_dashboard(df_products, df_orders, df_vendors, df_customers, df_items):
         with st.spinner("Analyzing demand parameters..."):
             forecast_df = predict_inventory_demand().head(8).copy()
             
-        # Updated to a clean Bar Chart with color scaling based on target volumes
         fig_forecast = px.bar(
             forecast_df,
             x="product_name",
@@ -136,16 +135,22 @@ def show_dashboard(df_products, df_orders, df_vendors, df_customers, df_items):
     with info_col1:
         st.markdown("#### 🏆 Top Performing Vendors (by Dataset Gross Revenue)")
         # Dynamically join transactional order items to registered active business profiles
-        vendor_sales = df_items.groupby("vendor_id")["price_per_unit"].sum().reset_index()
+        df_items_calc = df_items.copy()
+        if "subtotal" in df_items_calc.columns:
+            df_items_calc["gross_revenue"] = df_items_calc["subtotal"]
+        else:
+            df_items_calc["gross_revenue"] = df_items_calc["quantity"] * df_items_calc["price_per_unit"]
+            
+        vendor_sales = df_items_calc.groupby("vendor_id")["gross_revenue"].sum().reset_index()
         top_vendors = pd.merge(vendor_sales, df_vendors, on="vendor_id")
-        top_vendors = top_vendors.sort_values(by="price_per_unit", ascending=False).head(5)
+        top_vendors = top_vendors.sort_values(by="gross_revenue", ascending=False).head(5)
         
         fig_vendors = px.bar(
             top_vendors,
-            x="price_per_unit",
+            x="gross_revenue",
             y="business_name",
             orientation="h",
-            labels={"price_per_unit": "Gross Sales ($)", "business_name": "Store Name"},
+            labels={"gross_revenue": "Gross Sales ($)", "business_name": "Store Name"},
             color_discrete_sequence=["#2980B9"]
         )
         fig_vendors.update_layout(margin=dict(l=20, r=20, t=10, b=20), height=250, yaxis={"categoryorder":"total ascending"})
