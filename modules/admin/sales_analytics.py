@@ -3,8 +3,15 @@ import pandas as pd
 import plotly.express as px
 
 def show_sales_analytics(df_orders, df_items, df_products):
-    st.subheader("💰 Platform Sales & Transaction Insights")
-    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">💰 Platform Sales & Transaction Insights</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+   
     # Defensive copies & empty checks
     df_orders = df_orders.copy() if df_orders is not None else pd.DataFrame()
     df_items = df_items.copy() if df_items is not None else pd.DataFrame()

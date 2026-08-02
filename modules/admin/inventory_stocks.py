@@ -3,7 +3,16 @@ import pandas as pd
 import plotly.express as px
 
 def show_inventory_stocks(df_products, df_items, df_orders):
-    st.subheader("🧱 Platform Stock Status Monitoring")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">🧱 Platform Stock Status Monitoring</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
     # Safe local copies
     df_products = df_products.copy()
@@ -19,7 +28,15 @@ def show_inventory_stocks(df_products, df_items, df_orders):
     # ==========================================
     # 🧮 PART 1: INVENTORY KPI CARDS
     # ==========================================
-    st.markdown("### 📈 Core Supply Metrics")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📈 Core Supply Metrics</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     # Clean orders to get completed transaction frames
     valid_orders = df_orders[df_orders["status"] != "Cancelled"]
@@ -93,7 +110,15 @@ def show_inventory_stocks(df_products, df_items, df_orders):
     # ==========================================
     # 🚨 PART 2: CRITICAL LOW STOCK WARNING SYSTEM
     # ==========================================
-    st.markdown("### 🚨 Depleted & Critical Safety Level Triggers")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">🚨 Depleted & Critical Safety Level Triggers</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     if not low_stock_df.empty:
         st.error(f"⚠️ There are **{len(low_stock_df)}** items below warehouse threshold limits! Please submit reorder requests.")
@@ -120,7 +145,15 @@ def show_inventory_stocks(df_products, df_items, df_orders):
     # ==========================================
     # 📈 PART 3: INVENTORY CHARTS & USAGE ANALYSIS
     # ==========================================
-    st.markdown("### 📊 Demand & Stock Analytics")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📊 Demand & Stock Analytics</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     chart_col1, chart_col2 = st.columns(2)
     

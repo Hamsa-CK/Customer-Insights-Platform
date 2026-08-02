@@ -5,7 +5,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 def show_churn_clv_analysis(df_customers, df_orders, df_items, df_products):
-    st.subheader("🎯 Customer Retention, Churn Risk & Lifetime Value Model")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">🎯 Customer Retention, Churn Risk & Lifetime Value Model</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Safe Datetime Parsing
     df_orders = df_orders.copy() if df_orders is not None else pd.DataFrame()
@@ -97,8 +105,15 @@ def show_churn_clv_analysis(df_customers, df_orders, df_items, df_products):
     # ==========================================
     # 🧮 PART 1: CORE METRICS (6 KPI Cards)
     # ==========================================
-    st.markdown("### 📈 Churn & Value Lifecycle Health Indicators")
     
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📈 Churn & Value Lifecycle Health Indicators</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     total_cust = len(full_metrics)
     churn_at_risk = len(full_metrics[full_metrics["churn_risk"].isin(["Medium", "High"])])
     avg_clv_val = full_metrics["clv"].mean() if total_cust > 0 else 0.0
@@ -164,7 +179,15 @@ def show_churn_clv_analysis(df_customers, df_orders, df_items, df_products):
     # ==========================================
     # 📊 PART 2: VISUALIZATIONS (Clean 2-Column Rows)
     # ==========================================
-    st.markdown("### 📊 Predictive Cohorts & CLV Visualizations")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📊 Predictive Cohorts & CLV Visualizations</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     # --- ROW 1 ---
     col1, col2 = st.columns(2)

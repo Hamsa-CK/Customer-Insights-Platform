@@ -4,7 +4,16 @@ import plotly.express as px
 import os
 
 def show_reviews_ratings(df_reviews, df_products, df_vendors=None, df_customers=None, df_orders=None):
-    st.subheader("⭐ Customer Reviews & Ratings Intelligence")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">⭐ Customer Reviews & Ratings Intelligence</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     # Defensive copies & empty dataframe initializations
     df_reviews = df_reviews.copy() if df_reviews is not None else pd.DataFrame()
@@ -109,7 +118,15 @@ def show_reviews_ratings(df_reviews, df_products, df_vendors=None, df_customers=
     # ==========================================
     # 📊 PART 2: INTERACTIVE CHARTS
     # ==========================================
-    st.markdown("### 📊 Platform Rating Analytics")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📊 Platform Rating Analytics</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
     if not merged_reviews.empty and "rating" in merged_reviews.columns and merged_reviews["rating"].notna().any():
         chart_col1, chart_col2 = st.columns(2)
@@ -209,7 +226,15 @@ def show_reviews_ratings(df_reviews, df_products, df_vendors=None, df_customers=
     # ==========================================
     # 🛡️ PART 3: ADMIN MODERATION QUEUE
     # ==========================================
-    st.markdown("### 🛡️ Customer Review Moderation & Feedback Inspection")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">🛡️ Customer Review Moderation & Feedback Inspection</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
     if not merged_reviews.empty:
         filter_col1, filter_col2 = st.columns([2, 2])
@@ -300,7 +325,14 @@ def show_reviews_ratings(df_reviews, df_products, df_vendors=None, df_customers=
     # ==========================================
     # 🏆 PART 4: PRODUCT & VENDOR QUALITY LEADERBOARD
     # ==========================================
-    st.markdown("### 🏆 Product Quality Leaderboard")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">🏆 Product Quality Leaderboard</h3>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if not merged_reviews.empty and "product_name" in merged_reviews.columns and "rating" in merged_reviews.columns:
         product_summary = merged_reviews.groupby(["product_name", "business_name"]).agg(

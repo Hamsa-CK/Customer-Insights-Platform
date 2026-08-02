@@ -14,8 +14,15 @@ except ImportError:
         seed_vendor_marketplace_data = None
 
 def show_vendor_management(df_vendors, df_items, df_orders, df_reviews=None):
-    st.subheader("🛡️ Vendor Registrations & Gatekeeping")
-    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">🛡️ Vendor Registrations & Gatekeeping</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Defensive copies & empty checks
     df_vendors = df_vendors.copy() if df_vendors is not None else pd.DataFrame()
     df_items = df_items.copy() if df_items is not None else pd.DataFrame()
@@ -28,7 +35,15 @@ def show_vendor_management(df_vendors, df_items, df_orders, df_reviews=None):
     # ==========================================
     # 📋 PART 1: PENDING VENDORS APPLICATIONS
     # ==========================================
-    st.markdown("### 📥 Pending Registrations Queue")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📥 Pending Registrations Queue</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     pending_vendors = df_vendors[df_vendors["status"] == "Pending"]
     
     if not pending_vendors.empty and "business_name" in pending_vendors.columns:
@@ -110,7 +125,15 @@ def show_vendor_management(df_vendors, df_items, df_orders, df_reviews=None):
     # ==========================================
     # 🗃️ PART 2: ALL REGISTERED VENDORS LIST
     # ==========================================
-    st.markdown("### 🏬 Active & Suspended Sellers Directory")
+   
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">🏬 Active & Suspended Sellers Directory</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     non_pending_vendors = df_vendors[df_vendors["status"] != "Pending"]
     
@@ -182,7 +205,15 @@ def show_vendor_management(df_vendors, df_items, df_orders, df_reviews=None):
     # ==========================================
     # 🏆 PART 3: DATA CALCULATIONS & LEADERBOARD
     # ==========================================
-    st.markdown("### 🏆 Platform Vendor Leaderboard")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">🏆 Platform Vendor Leaderboard</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.caption("Rankings calculated from transactional datasets, return tracking, and buyer reviews")
 
     if not df_items.empty and "vendor_id" in df_items.columns and "price_per_unit" in df_items.columns:
@@ -291,7 +322,15 @@ def show_vendor_management(df_vendors, df_items, df_orders, df_reviews=None):
     # ==========================================
     # 📊 PART 4: VENDOR ANALYTICS CHARTS
     # ==========================================
-    st.markdown("### 📊 Vendor Analytics Visualizations")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📊 Vendor Analytics Visualizations</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     if not leaderboard.empty and "business_name" in leaderboard.columns and "total_revenue" in leaderboard.columns:
         chart_col1, chart_col2 = st.columns(2)

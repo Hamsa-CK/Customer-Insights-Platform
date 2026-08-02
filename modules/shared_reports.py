@@ -88,7 +88,16 @@ def generate_html_report(title, meta_info, summary_metrics, tables_dict, alert_n
 
 
 def show_reports_engine(user_role="admin", vendor_id=None):
-    st.markdown("## 📋 Advanced Business Reporting Engine")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">📋 Advanced Business Reporting Engine</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("Generate, audit, and export multi-matrix documented performance records across platform metrics.")
     st.markdown("---")
     

@@ -4,7 +4,15 @@ import plotly.express as px
 import os
 
 def show_product_management(df_products, df_vendors, df_items):
-    st.subheader("📦 Global Marketplace Catalog")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">📦 Global Marketplace Catalog</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Clean & Deep Copy DataFrames
     df_products = df_products.copy() if df_products is not None else pd.DataFrame()
@@ -70,7 +78,16 @@ def show_product_management(df_products, df_vendors, df_items):
     # ==========================================
     # 📋 PART 2: VIEW PRODUCTS GRID & MANAGING OPERATIONS
     # ==========================================
-    st.markdown(f"### 🗃️ Listed Items ({len(merged_display)} total matches)")
+    
+    st.markdown(
+        f"""
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">🗃️ Listed Items ({len(merged_display)} total matches)</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    
     
     # Display product catalog grid
     st.dataframe(
@@ -158,7 +175,15 @@ def show_product_management(df_products, df_vendors, df_items):
     # ==========================================
     # 📈 PART 3: PRODUCT ANALYTICS
     # ==========================================
-    st.markdown("### 📊 Catalog Analytics")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📊 Catalog Analytics</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     c_col1, c_col2 = st.columns(2)
     

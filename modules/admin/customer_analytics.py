@@ -6,7 +6,16 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
 def show_customer_analytics(df_customers, df_orders):
-    st.subheader("👤 Customer Performance & ML Segmentation Portal")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">👤 Customer Performance & ML Segmentation Portal</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     # Ensure timestamps are parsed properly
     df_orders = df_orders.copy()
@@ -18,7 +27,15 @@ def show_customer_analytics(df_customers, df_orders):
     # ==========================================
     # 🧮 PART 1: CORE CUSTOMER LIFECYCLE KPIs (All 5 Required)
     # ==========================================
-    st.markdown("### 📈 Core Customer Metrics")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📈 Core Customer Metrics</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     # 1. Total Customers in system
     total_cust = df_customers["customer_id"].nunique()
@@ -140,9 +157,15 @@ def show_customer_analytics(df_customers, df_orders):
     # ==========================================
     # 🧬 PART 3: K-MEANS CUSTOMER SEGMENTATION
     # ==========================================
-    st.markdown("### 🧬 Machine Learning: Customer Segmentation")
-    st.caption("Using K-Means Clustering to automatically sort customers into 4 strategic value tiers based on purchase dynamics.")
-
+    st.markdown(
+    """
+    <div style="border: 2px solid #E5E7EB; padding: 15px 20px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 5px 0; color: #1F2937;">🧬 Machine Learning: Customer Segmentation</h3>
+        <p style="margin: 0; color: #566573; font-size: 14px;">Using K-Means Clustering to automatically sort customers into 4 strategic value tiers based on purchase dynamics.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
     if not valid_orders.empty:
         rfm = valid_orders.groupby("customer_id").agg({
             "created_at": lambda x: (max_date - x.max()).days,  # Recency
@@ -227,7 +250,15 @@ def show_customer_analytics(df_customers, df_orders):
     # ==========================================
     # 🗂️ PART 4: DIRECTORY VIEW (Robust Column Mapping)
     # ==========================================
-    st.markdown("### 🔍 Segment Explorer Directory")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">🔍 Segment Explorer Directory</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     selected_tier = st.selectbox("Search Customer Profiles by ML Segment Group", ["All Segments", "Premium", "Regular", "Occasional", "Inactive"])
     

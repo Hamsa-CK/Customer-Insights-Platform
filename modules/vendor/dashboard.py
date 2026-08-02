@@ -36,6 +36,10 @@ def show_vendor_dashboard(vendor_id, df_products, df_items, df_orders):
             color: #28a745;
             font-weight: 500;
         }
+        /* Custom spacing column divider gap fix */
+        [data-testid="column"] {
+            padding: 0 15px;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -154,7 +158,7 @@ def show_vendor_dashboard(vendor_id, df_products, df_items, df_orders):
     # =========================================================================
     # 📉 UI LAYOUT: INVENTORY & INTELLIGENT RECOMMENDATIONS
     # =========================================================================
-    data_col1, data_col2 = st.columns(2)
+    data_col1, data_col2 = st.columns([1.05, 0.95], gap="large")
 
     with data_col1:
         st.markdown("#### 🚨 Inventory Stock Depletion Status")

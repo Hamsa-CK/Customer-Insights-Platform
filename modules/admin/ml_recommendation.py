@@ -4,7 +4,16 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 def show_recommendation_system(df_products, df_items, df_orders, df_customers):
-    st.subheader("🛍️ Intelligent Recommendation Engine")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">🛍️ Intelligent Recommendation Engine</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
     # Clean and pre-process datasets
     df_products = df_products.copy() if df_products is not None else pd.DataFrame()
@@ -35,8 +44,16 @@ def show_recommendation_system(df_products, df_items, df_orders, df_customers):
     # ==========================================
     # 👥 COLLABORATIVE FILTERING SYSTEM
     # ==========================================
-    st.markdown("### 👥 Collaborative Filtering (User-Item Affinity)")
-    st.caption("Suggests catalog items based on historical buying habits of similar customer profiles.")
+    
+    st.markdown(
+    """
+    <div style="border: 2px solid #E5E7EB; padding: 15px 20px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 5px 0; color: #1F2937;">👥 Collaborative Filtering (User-Item Affinity)</h3>
+        <p style="margin: 0; color: #566573; font-size: 14px;">Suggests catalog items based on historical buying habits of similar customer profiles.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
     # Select a target customer for demonstration
     customer_list = df_customers["customer_id"].unique().tolist() if not df_customers.empty and "customer_id" in df_customers.columns else []
@@ -95,8 +112,16 @@ def show_recommendation_system(df_products, df_items, df_orders, df_customers):
     # ==========================================
     # 🏷️ CONTENT-BASED FILTERING SYSTEM
     # ==========================================
-    st.markdown("### 🏷️ Content-Based Filtering (Item Similarity)")
-    st.caption("Finds similar items by analyzing shared category attributes and matching product pricing scales.")
+    
+    st.markdown(
+    """
+    <div style="border: 2px solid #E5E7EB; padding: 15px 20px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 5px 0; color: #1F2937;">🏷️ Content-Based Filtering (Item Similarity)</h3>
+        <p style="margin: 0; color: #566573; font-size: 14px;">Finds similar items by analyzing shared category attributes and matching product pricing scales.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
     product_list = df_products["name"].tolist() if not df_products.empty and "name" in df_products.columns else []
     
@@ -150,9 +175,17 @@ def show_recommendation_system(df_products, df_items, df_orders, df_customers):
     # ==========================================
     # 🔥 TRENDING PRODUCTS LISTING
     # ==========================================
-    st.markdown("### 🔥 Marketplace Trending Products")
-    st.caption("Top fast-moving products calculated by demand velocity and sales frequency in the last 30 days.")
     
+    st.markdown(
+    """
+    <div style="border: 2px solid #E5E7EB; padding: 15px 20px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 5px 0; color: #1F2937;">🔥 Marketplace Trending Products</h3>
+        <p style="margin: 0; color: #566573; font-size: 14px;">Top fast-moving products calculated by demand velocity and sales frequency in the last 30 days.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
     if not df_merged.empty and "product_id" in df_merged.columns and "quantity" in df_merged.columns:
         trending_sales = df_merged.groupby("product_id")["quantity"].sum().reset_index()
         trending_merged = pd.merge(trending_sales, df_products, on="product_id", how="inner").sort_values(by="quantity", ascending=False).head(5)

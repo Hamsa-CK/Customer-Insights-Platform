@@ -5,7 +5,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 def show_ml_forecasting(df_orders, df_items, df_products, df_customers, df_vendors):
-    st.subheader("🔮 Predictive Machine Learning & Sales Forecasting")
+    
+    st.markdown(
+        """
+        <div style="background-color: #9370DB; padding: 20px 30px; border-radius: 0px; margin-left: -5rem; margin-right: -5rem; margin-top: -2rem; margin-bottom: 25px;">
+            <h3 style="color: white; margin: 0; font-size: 32px;">🔮 Predictive Machine Learning & Sales Forecasting</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Data Pre-processing
     df_orders = df_orders.copy()
@@ -51,7 +59,15 @@ def show_ml_forecasting(df_orders, df_items, df_products, df_customers, df_vendo
     # ==========================================
     # 🧮 PART 1: FORECAST KPI CARDS (6 Cards Required)
     # ==========================================
-    st.markdown("### 📈 Next 30-Day Predictive Status Indicators")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📈 Next 30-Day Predictive Status Indicators</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     kpi_cols = st.columns(6)
     
     with kpi_cols[0]:
@@ -107,7 +123,15 @@ def show_ml_forecasting(df_orders, df_items, df_products, df_customers, df_vendo
     # ==========================================
     # 📊 PART 2: VISUALIZATIONS (10 Charts Required)
     # ==========================================
-    st.markdown("### 📊 Enterprise Predictive Visualizations")
+    
+    st.markdown(
+        """
+        <div style="border: 2px solid #E5E7EB; padding:10px 15px; border-radius: 12px; background-color: #FAFAFA; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #1F2937;">📊 Enterprise Predictive Visualizations</h3>
+        """,
+        unsafe_allow_html=True,
+    )
+
     
     # ------------------ PRE-COMPUTE TIME TRENDS ------------------
     df_orders["Month"] = df_orders["created_at"].dt.to_period("M").astype(str)
