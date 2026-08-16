@@ -5,5 +5,5 @@ faker>=19.0.0
 scikit-learn>=1.2.0
 plotly>=5.15.0
 pyarrow>=12.0.0
-prophet
-xgboost
+openpyxl
+reportlab

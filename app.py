@@ -6,6 +6,7 @@ import streamlit as st
 from modules.admin_portal import render_admin_dashboard
 from modules.generator import generate_datasets
 from modules.shared_reports import show_reports_engine
+from modules.upload_dataset import render_upload_dataset_page
 from modules.vendor_portal import render_vendor_dashboard
 
 # Configure page layout
@@ -332,182 +333,96 @@ if not st.session_state.logged_in:
     with right_col:
         st.markdown("<br>", unsafe_allow_html=True)
         
-        auth_tab1, auth_tab2 = st.tabs(
-            ["🔒 Secure Login", "📝 Join as a Vendor"]
+        # Removed tabs: auth_tab1, auth_tab2 = st.tabs(["🔒 Secure Login", "📝 Join as a Vendor"])
+        # Displaying direct Secure Login UI
+        st.markdown(
+            """
+            <div style="text-align: center; margin-top: 15px; margin-bottom: 20px;">
+                <div style="background: #EFF6FF; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 10px 20px rgba(37,99,235,0.15);">
+                    <span style="font-size: 28px;">🔐</span>
+                </div>
+                <h3 style="color: #1E293B; font-weight: 800; font-size: 24px; margin: 0;">Welcome Back!</h3>
+                <p style="color: #64748B; font-size: 14px; margin-top: 4px;">Log in to your ShopSense Dashboard.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-        with auth_tab1:
-            st.markdown(
-                """
-                <div style="text-align: center; margin-top: 15px; margin-bottom: 20px;">
-                    <div style="background: #EFF6FF; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 10px 20px rgba(37,99,235,0.15);">
-                        <span style="font-size: 28px;">🔐</span>
-                    </div>
-                    <h3 style="color: #1E293B; font-weight: 800; font-size: 24px; margin: 0;">Welcome Back!</h3>
-                    <p style="color: #64748B; font-size: 14px; margin-top: 4px;">Log in to your ShopSense Dashboard.</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
+        with st.form("login_form"):
+            email_input = st.text_input(
+                "Registered Email Address", value="admin@shopsense.com"
             )
-
-            with st.form("login_form"):
-                email_input = st.text_input(
-                    "Registered Email Address", value="admin@shopsense.com"
-                )
-                password_input = st.text_input(
-                    "Password", type="password", value="admin"
-                )
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                submit_btn = st.form_submit_button(
-                    "Authenticate Portal Access", use_container_width=True
-                )
-
-                if submit_btn:
-                    (
-                        df_vendors,
-                        df_products,
-                        df_items,
-                        df_orders,
-                        df_users,
-                        df_reviews,
-                    ) = load_system_datasets()
-
-                    matched_user = df_users[
-                        (df_users["email"] == email_input)
-                        & (df_users["password"] == password_input)
-                    ]
-
-                    if not matched_user.empty:
-                        user_record = matched_user.iloc[0]
-                        user_role = user_record["role"]
-
-                        if user_role == "vendor":
-                            vendor_rec = df_vendors[
-                                df_vendors["user_id"] == user_record["user_id"]
-                            ]
-
-                            if not vendor_rec.empty:
-                                v_status = vendor_rec.iloc[0]["status"]
-                                if v_status == "Pending":
-                                    st.error(
-                                        "⏳ **Access Denied:** Your vendor account registration is pending review."
-                                    )
-                                    st.stop()
-                                elif v_status == "Suspended":
-                                    st.error(
-                                        "🚫 **Access Suspended:** This vendor account has been deactivated."
-                                    )
-                                    st.stop()
-
-                            st.session_state.vendor_id = int(
-                                vendor_rec.iloc[0]["vendor_id"]
-                            )
-
-                        st.session_state.logged_in = True
-                        st.session_state.user_id = int(user_record["user_id"])
-                        st.session_state.user_role = user_role
-                        st.session_state.selected_page = "📊 Dashboard View"
-
-                        st.success("Authentication successful!")
-                        st.rerun()
-                    else:
-                        st.error("❌ Invalid credentials. Check email or password.")
-            
-            st.markdown(
-                """
-                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; margin-top: 16px;">
-                    <span style="font-size: 18px;">🛡️</span>
-                    <span style="color: #64748B; font-size: 12px; line-height: 1.4;">Your data is encrypted and protected with enterprise-grade security.</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        with auth_tab2:
-            st.markdown(
-                """
-                <div style="margin-top: 10px; margin-bottom: 15px;">
-                    <h3 style="color: #1E293B; font-weight: 800; font-size: 22px; margin: 0;">Register your Business</h3>
-                    <p style="color: #64748B; font-size: 13px; margin-top: 2px;">Join the ShopSense multi-vendor marketplace network.</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            password_input = st.text_input(
+                "Password", type="password", value="admin"
             )
             
-            with st.form("vendor_reg_form"):
-                reg_email = st.text_input("Business Email Address")
-                reg_pass = st.text_input("Choose Password", type="password")
-                reg_shop = st.text_input("Store/Business Name")
-                reg_owner = st.text_input("Owner's Full Name")
+            st.markdown("<br>", unsafe_allow_html=True)
+            submit_btn = st.form_submit_button(
+                "Authenticate Portal Access", use_container_width=True
+            )
 
-                col_sub1, col_sub2 = st.columns(2)
-                with col_sub1:
-                    reg_gst = st.text_input(
-                        "GST/Tax Number",
-                        max_chars=15,
-                        help="Format: 15-character alphanumeric code",
-                    )
-                with col_sub2:
-                    reg_phone = st.text_input("Contact Phone")
+            if submit_btn:
+                (
+                    df_vendors,
+                    df_products,
+                    df_items,
+                    df_orders,
+                    df_users,
+                    df_reviews,
+                ) = load_system_datasets()
 
-                col_sub3, col_sub4 = st.columns(2)
-                with col_sub3:
-                    reg_city = st.text_input("City")
-                with col_sub4:
-                    reg_state = st.text_input("State")
+                matched_user = df_users[
+                    (df_users["email"] == email_input)
+                    & (df_users["password"] == password_input)
+                ]
 
-                st.markdown("<br>", unsafe_allow_html=True)
-                register_btn = st.form_submit_button(
-                    "Submit Application", use_container_width=True
-                )
+                if not matched_user.empty:
+                    user_record = matched_user.iloc[0]
+                    user_role = user_record["role"]
 
-                if register_btn:
-                    if not (reg_email and reg_pass and reg_shop and reg_owner and reg_gst):
-                        st.warning("⚠️ Please fill out all required fields.")
-                    else:
-                        _, _, _, _, df_users, _ = load_system_datasets()
-                        df_vendors = pd.read_parquet("data/vendors.parquet")
+                    if user_role == "vendor":
+                        vendor_rec = df_vendors[
+                            df_vendors["user_id"] == user_record["user_id"]
+                        ]
 
-                        if reg_email in df_users["email"].values:
-                            st.error(
-                                "❌ An account with this email address already exists."
-                            )
-                        else:
-                            new_user_id = int(df_users["user_id"].max() + 1)
-                            new_user_df = pd.DataFrame([{
-                                "user_id": new_user_id,
-                                "email": reg_email,
-                                "password": reg_pass,
-                                "role": "vendor",
-                            }])
-                            df_users = pd.concat(
-                                [df_users, new_user_df], ignore_index=True
-                            )
-                            df_users.to_parquet("data/users.parquet", index=False)
+                        if not vendor_rec.empty:
+                            v_status = vendor_rec.iloc[0]["status"]
+                            if v_status == "Pending":
+                                st.error(
+                                    "⏳ **Access Denied:** Your vendor account registration is pending review."
+                                )
+                                st.stop()
+                            elif v_status == "Suspended":
+                                st.error(
+                                    "🚫 **Access Suspended:** This vendor account has been deactivated."
+                                )
+                                st.stop()
 
-                            new_vendor_id = int(df_vendors["vendor_id"].max() + 1)
-                            new_vendor_df = pd.DataFrame([{
-                                "vendor_id": new_vendor_id,
-                                "user_id": new_user_id,
-                                "business_name": reg_shop,
-                                "owner_name": reg_owner,
-                                "phone": reg_phone,
-                                "gst_number": reg_gst.upper(),
-                                "address": f"Suite {random.randint(100,999)}",
-                                "city": reg_city,
-                                "state": reg_state,
-                                "commission_percentage": 10.0,
-                                "status": "Pending",
-                            }])
-                            df_vendors = pd.concat(
-                                [df_vendors, new_vendor_df], ignore_index=True
-                            )
-                            df_vendors.to_parquet("data/vendors.parquet", index=False)
+                        st.session_state.vendor_id = int(
+                            vendor_rec.iloc[0]["vendor_id"]
+                        )
 
-                            st.cache_data.clear()
+                    st.session_state.logged_in = True
+                    st.session_state.user_id = int(user_record["user_id"])
+                    st.session_state.user_role = user_role
+                    st.session_state.selected_page = "📊 Dashboard View"
 
-                            st.success("🎉 Registration Successful! Pending admin review.")
+                    st.success("Authentication successful!")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid credentials. Check email or password.")
+        
+        st.markdown(
+            """
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; margin-top: 16px;">
+                <span style="font-size: 18px;">🛡️</span>
+                <span style="color: #64748B; font-size: 12px; line-height: 1.4;">Your data is encrypted and protected with enterprise-grade security.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+       
 
 # ==========================================
 # 🗺️ ACTIVE DASHBOARD ROUTING
@@ -553,6 +468,7 @@ else:
         if st.session_state.user_role == "admin":
             menu_options = [
                 "📊 Dashboard View",
+                "📂 Upload Dataset",  # <-- ADD THIS SINGLE LINE
                 "💰 Sales Analytics",
                 "🛡️ Vendor Management",
                 "📦 Product Management",
@@ -612,6 +528,8 @@ else:
     if st.session_state.user_role == "admin":
         if clean_selection == "Report":
             show_reports_engine(user_role="admin")
+        elif clean_selection == "Upload Dataset":  # <-- ADD THIS ROUTE
+            render_upload_dataset_page()
         else:
             render_admin_dashboard(active_tab=clean_selection)
     elif st.session_state.user_role == "vendor":

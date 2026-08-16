@@ -157,139 +157,35 @@ def show_order_management(vendor_id, df_orders, df_items, df_products):
     st.markdown("---")
 
     # =========================================================================
-    # 🎛️ STEP 4: INTERACTIVE LOGISTICS & ACTION TABS
+    # 🎛️ STEP 4: LOGISTICS TRACKING
     # =========================================================================
-    tab_track, tab_create, tab_cancel, tab_deliver, tab_return, tab_refund = st.tabs([
-        "🔍 Track Orders", 
-        "➕ Create Order", 
-        "🚫 Cancel Order", 
-        "🚚 Mark Delivered", 
-        "🔄 Process Return", 
-        "💸 Process Refund"
-    ])
 
     # -------------------------------------------------------------------------
-    # TAB 1: TRACK ORDERS
+    # TRACK ORDERS
     # -------------------------------------------------------------------------
-    with tab_track:
-        st.markdown("### 🔍 Search & Track Order Status")
+    st.markdown("### 🔍 Search & Track Order Status")
+
+    col_search, col_filter = st.columns([0.7, 0.3])
+    with col_search:
+        search_query = st.text_input("🔎 Search by Order ID", placeholder="Type Order ID...")
+    with col_filter:
+        status_filter = st.selectbox("Filter Status", ["All"] + list(my_orders["status"].unique()))
+
+    # Filter order table
+    display_orders = my_orders.copy()
+    if status_filter != "All":
+        display_orders = display_orders[display_orders["status"] == status_filter]
         
-        col_search, col_filter = st.columns([0.7, 0.3])
-        with col_search:
-            search_query = st.text_input("🔎 Search by Order ID", placeholder="Type Order ID...")
-        with col_filter:
-            status_filter = st.selectbox("Filter Status", ["All"] + list(my_orders["status"].unique()))
+    if search_query:
+        display_orders = display_orders[display_orders["order_id"].astype(str).str.contains(search_query, case=False, regex=False)]
 
-        # Filter order table
-        display_orders = my_orders.copy()
-        if status_filter != "All":
-            display_orders = display_orders[display_orders["status"] == status_filter]
-            
-        if search_query:
-            display_orders = display_orders[display_orders["order_id"].astype(str).str.contains(search_query, case=False, regex=False)]
-
-        st.dataframe(
-            display_orders.rename(columns={
-                "order_id": "Order ID", 
-                "created_at": "Timestamp", 
-                "status": "Fulfillment Status"
-            }),
-            use_container_width=True,
-            hide_index=True,
-            height=300
-        )
-
-    # -------------------------------------------------------------------------
-    # TAB 2: CREATE ORDER
-    # -------------------------------------------------------------------------
-    with tab_create:
-        st.markdown("### ➕ Manual Order Entry")
-        my_products = df_products[df_products["vendor_id"] == vendor_id]
-
-        if my_products.empty:
-            st.warning("⚠️ No products registered under your vendor account to issue orders.")
-        else:
-            with st.form("create_order_form"):
-                col_p, col_q = st.columns(2)
-                with col_p:
-                    selected_prod = st.selectbox("Select Product SKU", my_products["name"].unique())
-                with col_q:
-                    order_qty = st.number_input("Quantity", min_value=1, value=1, step=1)
-                
-                prod_row = my_products[my_products["name"] == selected_prod].iloc[0]
-                unit_price = prod_row["price"]
-                calc_total = unit_price * order_qty
-
-                st.info(f"💵 **Unit Price:** ${unit_price:,.2f} | **Estimated Total:** ${calc_total:,.2f}")
-                submit_create = st.form_submit_button("✨ Dispatch New Order")
-
-                if submit_create:
-                    st.toast(f"✅ Order generated successfully for {selected_prod}!")
-                    st.success(f"Order logged successfully! Added {order_qty}x '{selected_prod}' to pipeline.")
-
-    # -------------------------------------------------------------------------
-    # TAB 3: CANCEL ORDER
-    # -------------------------------------------------------------------------
-    with tab_cancel:
-        st.markdown("### 🚫 Cancel Active Order")
-        cancellable = my_orders[my_orders["status"].isin(["Pending", "Processing"])]
-
-        if cancellable.empty:
-            st.info("✅ No active pending orders eligible for cancellation.")
-        else:
-            cancel_id = st.selectbox("Select Order ID to Cancel", cancellable["order_id"].unique(), key="cancel_sel")
-            cancel_reason = st.text_area("Reason for Cancellation", placeholder="e.g. Item out of stock / Customer request...")
-            
-            if st.button("🚫 Void & Cancel Order", type="primary"):
-                st.toast(f"✅ Order #{cancel_id} marked as Cancelled.")
-                st.success(f"Order #{cancel_id} was updated to 'Cancelled'.")
-
-    # -------------------------------------------------------------------------
-    # TAB 4: DELIVERED
-    # -------------------------------------------------------------------------
-    with tab_deliver:
-        st.markdown("### 🚚 Mark Order as Delivered")
-        shippable = my_orders[my_orders["status"].isin(["Pending", "Processing", "Shipped"])]
-
-        if shippable.empty:
-            st.info("✅ All active orders are fully delivered.")
-        else:
-            deliver_id = st.selectbox("Select Order ID to Confirm Delivery", shippable["order_id"].unique(), key="deliv_sel")
-            
-            if st.button("✅ Confirm Delivery Status"):
-                st.toast(f"🚚 Order #{deliver_id} marked as Delivered!")
-                st.success(f"Order #{deliver_id} updated to 'Delivered'.")
-
-    # -------------------------------------------------------------------------
-    # TAB 5: RETURNED
-    # -------------------------------------------------------------------------
-    with tab_return:
-        st.markdown("### 🔄 Register Returned Items")
-        returnable = my_orders[my_orders["status"] == "Delivered"]
-
-        if returnable.empty:
-            st.info("ℹ️ No delivered orders available for return processing.")
-        else:
-            return_id = st.selectbox("Select Order ID to Process Return", returnable["order_id"].unique(), key="ret_sel")
-            return_condition = st.selectbox("Item Inspection Condition", ["Unopened / Restockable", "Damaged / Defective", "Wrong Item Sent"])
-            
-            if st.button("🔄 Confirm Order Return"):
-                st.toast(f"🔄 Return logged for Order #{return_id}.")
-                st.success(f"Order #{return_id} logged as 'Returned' with condition: {return_condition}.")
-
-    # -------------------------------------------------------------------------
-    # TAB 6: REFUND
-    # -------------------------------------------------------------------------
-    with tab_refund:
-        st.markdown("### 💸 Issue Customer Refund")
-        refundable = my_orders[my_orders["status"].isin(["Returned", "Cancelled"])]
-
-        if refundable.empty:
-            st.info("ℹ️ No returned or cancelled orders currently awaiting refund approval.")
-        else:
-            refund_id = st.selectbox("Select Order ID to Issue Refund", refundable["order_id"].unique(), key="ref_sel")
-            refund_amount = st.number_input("Refund Amount ($)", min_value=0.01, value=50.00, step=5.00)
-            
-            if st.button("💸 Authorize & Issue Refund"):
-                st.toast(f"💸 Refund of ${refund_amount:,.2f} processed for Order #{refund_id}!")
-                st.success(f"Successfully issued ${refund_amount:,.2f} refund for Order #{refund_id}.")
+    st.dataframe(
+        display_orders.rename(columns={
+            "order_id": "Order ID", 
+            "created_at": "Timestamp", 
+            "status": "Fulfillment Status"
+        }),
+        use_container_width=True,
+        hide_index=True,
+        height=300
+    )

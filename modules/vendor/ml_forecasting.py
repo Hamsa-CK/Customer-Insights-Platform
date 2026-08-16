@@ -3,10 +3,8 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-# Machine Learning & Time-Series Engines
+# Machine Learning Engine
 from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
-from prophet import Prophet
 
 def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
     # =========================================================================
@@ -45,7 +43,7 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
     """, unsafe_allow_html=True)
 
     st.subheader("🔮 Predictive Machine Learning & Stock Requirement Forecasting")
-    st.caption("Train complex multi-variable models including Random Forest, XGBoost, and Prophet to forecast inventory needs.")
+    st.caption("Train multi-variable Random Forest models to forecast inventory needs.")
 
     # =========================================================================
     # 🧮 STEP 1: TIME-SERIES FEATURE ENGINEERING PIPELINE
@@ -114,16 +112,11 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
     st.markdown("---")
 
     # =========================================================================
-    # 🤖 STEP 3: MODEL TRAINING LOOP (RANDOM FOREST, XGBOOST, PROPHET)
+    # 🤖 STEP 3: MODEL TRAINING LOOP (RANDOM FOREST REGRESSOR)
     # =========================================================================
     st.markdown("#### 🧠 Train Machine Learning Model Ensembles")
     
-    # Setup model selection triggers
-    algo_selection = st.radio(
-        "Choose Target Forecasting Core Algorithm Architecture:",
-        ["Random Forest Regressor", "XGBoost Framework", "Prophet (Meta Time-Series)"],
-        horizontal=True
-    )
+    st.caption("Active Core Algorithm Architecture: **Random Forest Regressor**")
 
     # Separate structural variables matrices
     feature_cols = ["Previous Sales", "Season", "Month", "Festival", "Promotion"]
@@ -139,50 +132,14 @@ def show_ml_forecasting(vendor_id, df_items, df_orders, df_products):
         input_promo
     ]], columns=feature_cols)
 
-    # Initialize execution metrics indicators safely before conditional branching
-    prediction = 0.0
-    final_stock_requirement = 0
-    model_confidence_label = ""
-
-    if "Random Forest" in algo_selection:
-        # 🌳 1. Random Forest Engine Execution
-        rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-        rf_model.fit(X, y)
-        prediction = float(rf_model.predict(live_test_df)[0])
-        
-        # Calculate stock requirement holding a 20% safety margin buffer
-        final_stock_requirement = int(np.ceil(prediction * 1.20))
-        model_confidence_label = "Stable Ensemble Convergence"
-
-    elif "XGBoost" in algo_selection:
-        # ⚡ 2. XGBoost Engine Execution
-        xgb_model = XGBRegressor(n_estimators=50, max_depth=3, learning_rate=0.1, random_state=42)
-        xgb_model.fit(X, y)
-        prediction = float(xgb_model.predict(live_test_df)[0])
-        
-        final_stock_requirement = int(np.ceil(max(0.0, prediction) * 1.20))
-        model_confidence_label = "Gradient Boosted Scale Matrices"
-
-    else:
-        # 📈 3. Prophet Engine Execution with Fallback Handling
-        try:
-            prophet_df = daily_sales[["date", "quantity"]].rename(columns={"date": "ds", "quantity": "y"})
-            
-            m = Prophet(yearly_seasonality=True, daily_seasonality=False, weekly_seasonality=True)
-            m.fit(prophet_df)
-            
-            # Extrapolate out a 30-day structural horizon dataframe
-            future_horizon = m.make_future_dataframe(periods=30)
-            forecast_results = m.predict(future_horizon)
-            
-            prediction = float(forecast_results["yhat"].iloc[-1])
-            final_stock_requirement = int(np.ceil(max(0.0, prediction) * 1.25))
-            model_confidence_label = "Additive Logistic Trend Component"
-        except Exception as e:
-            st.warning(f"Prophet optimization failed to converge: {e}. Falling back to baseline mean projection.")
-            prediction = float(daily_sales["quantity"].mean())
-            final_stock_requirement = int(np.ceil(prediction * 1.20))
-            model_confidence_label = "Fallback Moving Average Baseline"
+    # 🌳 Random Forest Engine Execution
+    rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf_model.fit(X, y)
+    prediction = float(rf_model.predict(live_test_df)[0])
+    
+    # Calculate stock requirement holding a 20% safety margin buffer
+    final_stock_requirement = int(np.ceil(prediction * 1.20))
+    model_confidence_label = "Stable Ensemble Convergence"
 
     # =========================================================================
     # 🎛️ STEP 4: OUTPUT DISPLAY VIEWS (HIGH-FIDELITY UX CARDS)
