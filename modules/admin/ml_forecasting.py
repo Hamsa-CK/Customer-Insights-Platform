@@ -309,14 +309,4 @@ def show_ml_forecasting(df_orders, df_items, df_products, df_customers, df_vendo
         fig9.update_layout(margin=dict(l=10,r=10,t=10,b=10), height=240)
         st.plotly_chart(fig9, use_container_width=True)
 
-    with col6:
-        # Chart 10: Forecast Accuracy Comparison – Horizontal Metric Comparison Bar
-        st.markdown("#### 🔟 Machine Learning Models Validation Accuracy")
-        accuracy_metrics = pd.DataFrame({
-            "Algorithmic Model": ["Revenue RNN", "Order ARIMA", "Customer XGBoost", "Demand Random Forest"],
-            "Validation Accuracy (%)": [94.2, 89.5, 91.1, 86.4]
-        })
-        fig10 = px.bar(accuracy_metrics, x="Validation Accuracy (%)", y="Algorithmic Model", orientation="h",
-                       color="Validation Accuracy (%)", color_continuous_scale="Teal", text_auto=".1f")
-        fig10.update_layout(margin=dict(l=10,r=10,t=10,b=10), height=240, coloraxis_showscale=False)
-        st.plotly_chart(fig10, use_container_width=True)
+    
